@@ -1,0 +1,8 @@
+pandas
+numpy
+requests
+Pillow
+psutil
+pywin32
+selenium
+fastapi[standard]

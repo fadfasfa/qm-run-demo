@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hextech 极地枢纽 - 英雄海克斯矩阵</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="canvas_fallback.js"></script>
+    <style>
+        body {
+            background-color: #11111b;
+            background-image: radial-gradient(circle at 50% 10%, rgba(137, 180, 250, 0.08), transparent 60%);
+            color: #cdd6f4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(30, 30, 46, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tier-prismatic {
+            background: linear-gradient(180deg, #fef3c7 0%, #f59e0b 36%, #fb7185 72%, #22d3ee 100%);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.08),
+                0 0 12px rgba(251, 191, 36, 0.38),
+                0 0 16px rgba(34, 211, 238, 0.16);
+        }
+
+        .tier-gold {
+            background: linear-gradient(to bottom, #f8d66d, #c9830f);
+            box-shadow: 0 0 8px rgba(202, 138, 4, 0.34);
+        }
+
+        .tier-silver {
+            background: linear-gradient(to bottom, #d8e1ef, #64748b);
+            box-shadow: 0 0 8px rgba(148, 163, 184, 0.18);
+        }
+
+        .list-row {
+            transition: all 0.2s;
+        }
+
+        .hextech-card {
+            /* 保持正常布局，避免滚动时触发浏览器的内容可见性回补。 */
+        }
+
+        .augment-icon-shell {
+            position: relative;
+            flex-shrink: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, rgba(6, 9, 14, 0.99) 0%, rgba(3, 5, 9, 0.99) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            --augment-accent: 43, 213, 194;
+            isolation: isolate;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.05),
+                inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+        }
+
+        .augment-icon-shell::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 0% 0%, rgba(var(--augment-accent), 0.35) 0%, transparent 60%),
+                linear-gradient(135deg, rgba(var(--augment-accent), 0.15) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .augment-icon-shell::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            z-index: 2;
+            padding: 1px;
+            background: linear-gradient(145deg,
+                    rgba(255, 255, 255, 0.20) 0%,
+                    rgba(255, 255, 255, 0.04) 26%,
+                    rgba(255, 255, 255, 0.01) 56%,
+                    rgba(255, 255, 255, 0.10) 100%);
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.58;
+        }
+
+        .augment-icon-shell img {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 11%;
+            filter: saturate(1.04) contrast(1.02) brightness(1.02);
+        }
+
+        .augment-icon-shell--list {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            border: 2px solid transparent;
+        }
+
+        .augment-icon-shell--detail {
+            width: 68px;
+            height: 68px;
+            border-radius: 18px;
+            border: 2px solid transparent;
+        }
+
+        .tier-shell-prismatic {
+            --augment-accent: 34, 211, 238;
+            --augment-accent-2: 168, 85, 247;
+            border-color: rgba(34, 211, 238, 0.82) !important;
+            background:
+                radial-gradient(circle at 26% 20%, rgba(255, 255, 255, 0.14) 0%, transparent 20%),
+                radial-gradient(circle at 72% 22%, rgba(34, 211, 238, 0.16) 0%, transparent 26%),
+                radial-gradient(circle at 52% 88%, rgba(168, 85, 247, 0.14) 0%, transparent 30%),
+                linear-gradient(160deg, rgba(14, 18, 26, 0.996) 0%, rgba(7, 10, 16, 0.998) 48%, rgba(11, 16, 24, 0.994) 100%) !important;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.04),
+                0 0 12px rgba(34, 211, 238, 0.30),
+                0 0 18px rgba(168, 85, 247, 0.12),
+                0 12px 24px rgba(0, 0, 0, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.03) !important;
+        }
+        .tier-shell-prismatic::before {
+            background:
+                radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.14) 0%, transparent 22%),
+                radial-gradient(circle at 70% 24%, rgba(34, 211, 238, 0.20) 0%, transparent 28%),
+                radial-gradient(circle at 64% 76%, rgba(168, 85, 247, 0.16) 0%, transparent 24%),
+                linear-gradient(135deg, rgba(34, 211, 238, 0.08) 0%, rgba(168, 85, 247, 0.08) 46%, transparent 90%) !important;
+        }
+
+        .tier-shell-gold {
+            --augment-accent: 244, 191, 36;
+            border-color: #f4bf24 !important;
+            box-shadow: 0 0 12px rgba(244, 191, 36, 0.42), 0 10px 22px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+        }
+        .tier-shell-gold::before {
+            background: radial-gradient(circle at 0% 0%, rgba(244, 191, 36, 0.36) 0%, transparent 60%), linear-gradient(135deg, rgba(244, 191, 36, 0.15) 0%, transparent 50%) !important;
+        }
+
+        .tier-shell-silver {
+            --augment-accent: 148, 163, 184;
+            border-color: #94a3b8 !important;
+            box-shadow: 0 0 8px rgba(148, 163, 184, 0.28), 0 10px 22px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+        }
+        .tier-shell-silver::before {
+            background: radial-gradient(circle at 0% 0%, rgba(148, 163, 184, 0.26) 0%, transparent 60%), linear-gradient(135deg, rgba(148, 163, 184, 0.1) 0%, transparent 50%) !important;
+        }
+
+
+
+
+        .list-row:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            transform: translateX(4px);
+            border-radius: 0.5rem;
+        }
+
+        .scroll-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .scroll-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(137, 180, 250, 0.3);
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(137, 180, 250, 0.5);
+        }
+
+        .scroll-container {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(137, 180, 250, 0.3) rgba(0, 0, 0, 0.2);
+            overscroll-behavior: contain;
+            overflow-anchor: none;
+            touch-action: pan-y;
+            scrollbar-gutter: stable both-edges;
+        }
+
+        html {
+            scroll-behavior: auto;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        @keyframes autoLockFlash {
+            0% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+                transform: scale(1);
+                border-color: transparent;
+            }
+
+            20% {
+                box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0.8);
+                transform: scale(1.02);
+                border-color: #3b82f6;
+            }
+
+            40% {
+                transform: scale(0.99);
+            }
+
+            60% {
+                transform: scale(1.01);
+            }
+
+            80% {
+                box-shadow: 0 0 15px 2px rgba(59, 130, 246, 0.4);
+                transform: scale(1);
+                border-color: rgba(255, 255, 255, 0.05);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+                transform: scale(1);
+                border-color: rgba(255, 255, 255, 0.05);
+            }
+        }
+
+        .anim-auto-lock {
+            animation: autoLockFlash 0.8s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-6">
+
+    <nav class="max-w-6xl mx-auto mb-6 flex justify-between items-center">
+        <a href="index.html" class="text-gray-400 hover:text-white flex items-center space-x-2 transition-colors">
+            <span class="text-xl">返回</span> <span>返回大盘风云榜</span>
+        </a>
+        <div id="wsStatus" class="flex items-center space-x-2 text-xs">
+            <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
+            <span class="text-gray-400">WS 待连接</span>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto">
+        <header class="glass-panel rounded-2xl p-6 mb-8 flex items-center space-x-6 relative overflow-hidden"
+            id="mainHeader">
+            <div id="headerBg" class="absolute right-0 top-0 bottom-0 w-1/2 opacity-20 bg-cover bg-left"></div>
+            <img id="heroAvatar" src=""
+                class="w-20 h-20 rounded-xl border-2 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)] relative z-10 bg-gray-900 object-cover"
+                onerror="(() => {
+                     let stage = this.dataset.fallbackStage || '0';
+                     if (stage === '0') {
+                         this.src = 'https://ddragon.leagueoflegends.com/cdn/' + (window.ddVersion || '14.3.1') + '/img/champion/' + (window.enName || '').replace(/[^\w]/g, '') + '.png';
+                         this.dataset.fallbackStage = '1';
+                     } else if (stage === '1') {
+                         if (window.handleAssetMissing) {
+                             window.handleAssetMissing(this, window.heroName || '?', 'avatar', '');
+                         }
+                          this.dataset.fallbackStage = '2';
+                          this.onerror = null;
+                     }
+                 }).call(this)">
+
+            <div class="relative z-10">
+                <div class="flex items-center space-x-3 mb-1">
+                    <h1 id="heroName" class="text-3xl font-black text-white">加载中...</h1>
+                </div>
+                <div class="flex space-x-6 text-sm mt-2">
+                    <p><span class="text-gray-400">贝叶斯胜率:</span> <span id="heroWR"
+                            class="text-green-400 font-bold text-lg">-</span></p>
+                    <p><span class="text-gray-400">全服出场率:</span> <span id="heroPR"
+                            class="text-white font-bold text-lg">-</span></p>
+                </div>
+            </div>
+        </header>
+
+        <section class="glass-panel rounded-2xl p-6 min-h-[400px]">
+            <div class="flex flex-wrap gap-2 items-center mb-4 pb-4 border-b border-gray-800">
+                <div class="flex gap-2">
+                    <button id="btn-comprehensive" onclick="setDisplayMode('comprehensive')"
+                        class="mode-btn px-4 py-2 rounded-lg bg-blue-600 text-white font-bold text-sm shadow-[0_0_10px_rgba(37,99,235,0.4)] transition-colors">综合推荐
+                        综合推荐</button>
+                    <button id="btn-winrate" onclick="setDisplayMode('winrate_only')"
+                        class="mode-btn px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#313244] font-medium text-sm transition-colors">纯胜率
+                        纯胜率</button>
+                </div>
+                <div class="flex-1"></div>
+                <div class="flex gap-2">
+                    <button id="tab-all" onclick="switchView('all')"
+                        class="tab-btn px-5 py-2 rounded-lg bg-blue-600 text-white font-bold shadow-[0_0_10px_rgba(37,99,235,0.4)] transition-colors">全部海克斯</button>
+                    <button id="tab-Prismatic" onclick="switchView('Prismatic')"
+                        class="tab-btn px-5 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#313244] font-medium transition-colors">棱彩</button>
+                    <button id="tab-Gold" onclick="switchView('Gold')"
+                        class="tab-btn px-5 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#313244] font-medium transition-colors">黄金</button>
+                    <button id="tab-Silver" onclick="switchView('Silver')"
+                        class="tab-btn px-5 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#313244] font-medium transition-colors">白银</button>
+                </div>
+            </div>
+
+            <div id="loadingSpinner" class="text-center py-20">
+                <div
+                    class="inline-block w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin">
+                </div>
+                <div class="text-gray-400 mt-4 font-bold tracking-widest">提纯海克斯数据中...</div>
+            </div>
+
+            <div id="noDataTip" class="hidden text-center py-20">
+                <div class="text-gray-500 text-xl font-bold">暂无有效海克斯战报</div>
+                <div class="text-gray-600 text-sm mt-2">该阶级可能样本过少或被系统过滤</div>
+            </div>
+
+            <div id="dataContainer" class="flex gap-4 hidden">
+                <div class="w-[45%] flex-shrink-0">
+                    <div id="compList" class="flex flex-col gap-4 scroll-container"
+                        style="max-height: 650px; overflow-y: auto; padding-right: 8px; overscroll-behavior: contain; overflow-anchor: none;"></div>
+                </div>
+
+                <div class="w-[55%]">
+                    <div id="synergyArticleScroll"
+                        class="flex flex-col gap-4 max-h-[650px] overflow-y-auto scroll-container"
+                        style="padding-right: 8px; overscroll-behavior: contain; overflow-anchor: none;">
+                        <div class="glass-panel rounded-xl p-4">
+                            <div class="text-sm text-gray-400 text-center">选择左侧海克斯查看联动文章</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin;
+        const WS_URL = window.location.protocol === 'file:' ? 'ws://localhost:8000' : 'ws://' + (window.location.host || 'localhost:8000');
+        let ddVersion = '14.3.1';
+        window.ddVersion = ddVersion;
+        fetch('https://ddragon.leagueoflegends.com/api/versions.json')
+            .then(r => r.json())
+            .then(v => { if (v && v[0]) { ddVersion = v[0]; window.ddVersion = ddVersion; } })
+            .catch(() => { });
+
+        let hextechData = null;
+        let currentView = 'all';
+        let currentMode = 'comprehensive';
+        let activeArray = null;
+        let synergyData = null;
+        let ws = null;
+
+        const tabId = Math.random().toString(36).substring(2, 9);
+        const bc = new BroadcastChannel('hextech_nexus_channel');
+        bc.onmessage = (e) => {
+            if (e.data.type === 'new_tab_opened' && e.data.id !== tabId) {
+                document.body.innerHTML = '<div class="flex items-center justify-center h-screen text-gray-500 text-xl font-bold">已唤醒 已在新的悬浮窗中唤醒，本窗口已自动休眠。</div>';
+                if (window.wsInstance) window.wsInstance.close();
+            }
+        };
+        bc.postMessage({ type: 'new_tab_opened', id: tabId });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const hero = urlParams.get('hero');
+        const enName = urlParams.get('en');
+        const heroId = urlParams.get('id');
+        const heroWR = urlParams.get('wr');
+        const heroPR = urlParams.get('pr');
+        const isAuto = urlParams.get('auto');
+
+        window.enName = enName;
+        window.heroId = heroId;
+        window.heroName = hero;
+
+        if (hero) document.getElementById('heroName').textContent = hero;
+        if (heroWR) document.getElementById('heroWR').textContent = heroWR;
+        if (heroPR) document.getElementById('heroPR').textContent = heroPR;
+
+        if (heroId) {
+            document.getElementById('heroAvatar').src = `./assets/${heroId}.png`;
+        } else if (enName) {
+            document.getElementById('heroAvatar').src = `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/img/champion/${enName}.png`;
+        } else {
+            document.getElementById('headerBg').style.backgroundColor = '#181825';
+            document.getElementById('heroAvatar').src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2240%22>?</text></svg>';
+        }
+
+        if (enName) {
+            document.getElementById('headerBg').style.backgroundImage = `url('https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${enName}_0.jpg')`;
+        }
+
+        if (isAuto === '1') {
+            document.getElementById('mainHeader').classList.add('anim-auto-lock');
+        }
+
+        function setDisplayMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.className = 'mode-btn px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#313244] font-medium text-sm transition-colors';
+            });
+            const activeBtn = mode === 'comprehensive' ? document.getElementById('btn-comprehensive') : document.getElementById('btn-winrate');
+            if (activeBtn) {
+                activeBtn.className = 'mode-btn px-4 py-2 rounded-lg bg-blue-600 text-white font-bold text-sm shadow-[0_0_10px_rgba(37,99,235,0.4)] transition-colors';
+            }
+            renderCurrentView();
+        }
+
+        function switchView(view) {
+            currentView = view;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = 'tab-btn px-5 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#313244] font-medium transition-colors';
+            });
+            const activeBtn = document.getElementById(`tab-${view}`);
+            if (activeBtn) {
+                activeBtn.className = 'tab-btn px-5 py-2 rounded-lg bg-blue-600 text-white font-bold shadow-[0_0_10px_rgba(37,99,235,0.4)] transition-colors';
+            }
+            renderCurrentView();
+        }
+
+        function getTierBarClass(tier) {
+            if (tier.includes('棱彩') || tier.includes('彩色') || tier === 'Prismatic') return 'tier-prismatic';
+            if (tier.includes('金') || tier === 'Gold') return 'tier-gold';
+            return 'tier-silver';
+        }
+
+        function toLocalAugmentIconUrl(iconUrl, hextechName) {
+            if (iconUrl) {
+                return iconUrl;
+            }
+
+            return `./assets/${encodeURIComponent(hextechName)}.png`;
+        }
+
+        function getAugmentTierClass(tier) {
+            const t = tier || '';
+            if (t.includes('棱彩') || t.includes('彩色') || t === 'Prismatic') return 'tier-shell-prismatic';
+            if (t.includes('黄金') || t.includes('金') || t === 'Gold') return 'tier-shell-gold';
+            return 'tier-shell-silver';
+        }
+
+        function renderAugmentIcon(iconUrl, hextechName, tier, variant = 'list') {
+            const localIconUrl = toLocalAugmentIconUrl(iconUrl, hextechName);
+            const tierClass = getAugmentTierClass(tier);
+            const safeHextechName = escapeHtml(hextechName);
+            const safeTier = escapeHtml(tier || '');
+            const safeIconUrl = escapeHtml(localIconUrl);
+            const shellClass = variant === 'detail'
+                ? `augment-icon-shell augment-icon-shell--detail ${tierClass}`
+                : `augment-icon-shell augment-icon-shell--list ${tierClass}`;
+
+            return `
+                <div class="${shellClass}">
+                    <img src="${safeIconUrl}"
+                         alt="${safeHextechName}"
+                         decoding="async"
+                         data-hextech-name="${safeHextechName}"
+                         data-hextech-tier="${safeTier}"
+                         onerror="if (window.handleAssetMissing) { window.handleAssetMissing(this, this.dataset.hextechName || this.alt || '?', 'generic', this.dataset.hextechTier || ''); } else { this.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;><rect fill=&quot;%23333&quot; width=&quot;100&quot; height=&quot;100&quot;/><text x=&quot;50&quot; y=&quot;55&quot; text-anchor=&quot;middle&quot; fill=&quot;%23666&quot; font-size=&quot;34&quot; font-family=&quot;Arial&quot;>' + ((this.dataset.hextechName || this.alt || '?').charAt(0)) + '</text></svg>'); }">
+                </div>
+            `;
+        }
+
+        function createHextechCard(hextech, index) {
+            const iconUrl = toLocalAugmentIconUrl(hextech.icon, hextech.海克斯名称);
+            const tierClass = getTierBarClass(hextech.海克斯阶级);
+
+            const wr = (hextech.海克斯胜率 * 100).toFixed(1);
+            const pr = (hextech.海克斯出场率 * 100).toFixed(1);
+
+                return `
+            <div class="list-row flex items-center p-2 rounded border border-gray-700 bg-[#1e1e2e] hover:bg-[#252535] transition-colors gap-2">
+                <div class="w-6 text-center text-xs font-bold text-gray-500">${index + 1}</div>
+
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <div class="w-1 h-6 rounded-full ${tierClass}"></div>
+                    ${renderAugmentIcon(iconUrl, hextech.海克斯名称, hextech.海克斯阶级, 'list')}
+                </div>
+
+                <div class="flex-1 truncate ml-2">
+                    <div class="text-sm font-bold text-gray-200 truncate" title="${escapeHtml(hextech.海克斯名称)}">${escapeHtml(hextech.海克斯名称)}</div>
+                </div>
+
+                <div class="w-16 text-right">
+                    <div class="text-sm font-bold text-green-400">${wr}%</div>
+                </div>
+
+                <div class="w-14 text-right">
+                    <div class="text-xs text-gray-400">${pr}%</div>
+                </div>
+            </div>
+            `;
+        }
+
+        function renderCurrentView() {
+            if (!hextechData) return;
+            const compList = document.getElementById('compList');
+            const dataContainer = document.getElementById('dataContainer');
+            const noDataTip = document.getElementById('noDataTip');
+
+            let leftData = [];
+
+            const baseArray = currentMode === 'winrate_only' ? hextechData.winrate_only : hextechData.comprehensive;
+
+            if (currentView === 'all') {
+                leftData = baseArray || [];
+            } else {
+                const tierData = hextechData[currentView] || [];
+                if (currentMode === 'winrate_only') {
+                    leftData = tierData.slice().sort((a, b) => b.海克斯胜率 - a.海克斯胜率);
+                } else {
+                    leftData = tierData.slice().sort((a, b) => (b.综合得分 || 0) - (a.综合得分 || 0));
+                }
+            }
+
+
+            if (leftData.length === 0) {
+                dataContainer.classList.add('hidden');
+                noDataTip.classList.remove('hidden');
+            } else {
+                noDataTip.classList.add('hidden');
+                dataContainer.classList.remove('hidden');
+                compList.innerHTML = leftData.map((h, i) => createHextechCard(h, i)).join('');
+
+                updateFilteredSynergies(currentView);
+            }
+        }
+
+        function updateFilteredSynergies(tier) {
+            const container = document.getElementById('synergyArticleScroll');
+            if (!synergyData || synergyData.length === 0) {
+                container.innerHTML = '<div class="glass-panel rounded-xl p-4"><div class="text-sm text-gray-400 text-center">暂无联动文章</div></div>';
+                return;
+            }
+
+            const tierKeywords = {
+                'all': null,
+                'Prismatic': ['棱彩'],
+                'Gold': ['黄金', '金色'],
+                'Silver': ['白银', '银色']
+            };
+
+            const keywords = tierKeywords[tier];
+            let filtered = synergyData;
+
+            if (keywords) {
+                filtered = synergyData.filter(item => {
+                    return keywords.some(kw => item.includes(kw));
+                });
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="glass-panel rounded-xl p-4"><div class="text-sm text-gray-400 text-center">该阶级无联动文章</div></div>';
+                return;
+            }
+
+            renderSynergyArticles(filtered, container);
+        }
+
+        function renderSynergyArticles(articles, container) {
+            if (!articles || articles.length === 0) {
+                container.innerHTML = '<div class="glass-panel rounded-xl p-4"><div class="text-sm text-gray-400 text-center">暂无联动文章</div></div>';
+                return;
+            }
+
+            const parsedArticles = articles.map(str => {
+                const parts = str.split('|').map(s => s.trim());
+                if (parts.length >= 4) {
+                    const nameInfo = parts[0];
+                    const tierName = parts[1];
+                    const gradeStr = parts[2];
+                    const tagGroup = parts[3];
+                    const upvotesStr = parts.length > 4 && parts[4].includes('|') === false ? parts[4] : '0 | 0';
+                    const upvoteMatches = upvotesStr.match(/(\d+)\s*\|\s*(\d+)/) || ['0', '0', '0'];
+                    const upvotes = parseInt(upvoteMatches[1] || '0');
+                    const downvotes = parseInt(upvoteMatches[2] || '0');
+
+                    let author = "佚名";
+                    let content = "";
+                    let isOriginal = false;
+
+                    if (parts.length > 5) {
+                        const nextPart = parts[5];
+                        let contentStartIndex = 5;
+                        if (nextPart.startsWith('作者：') || nextPart.startsWith('作者:')) {
+                            author = nextPart.substring(3).trim();
+                            contentStartIndex = 6;
+                            if (parts.length > 6 && parts[6] === '原创') {
+                                isOriginal = true;
+                                contentStartIndex = 7;
+                            }
+                        } else if (nextPart === '原创') {
+                            isOriginal = true;
+                            contentStartIndex = 6;
+                            if (parts.length > 6 && (parts[6].startsWith('作者：') || parts[6].startsWith('作者:'))) {
+                                author = parts[6].substring(3).trim();
+                                contentStartIndex = 7;
+                            }
+                        }
+                        content = parts.slice(contentStartIndex).join(' | ');
+                    }
+
+                    const gradeVal = gradeStr.toUpperCase();
+                    let gradeScore = 0;
+                    if (gradeVal.includes('SS')) gradeScore = 6;
+                    else if (gradeVal.includes('S')) gradeScore = 5;
+                    else if (gradeVal.includes('A')) gradeScore = 4;
+                    else if (gradeVal.includes('B')) gradeScore = 3;
+                    else if (gradeVal.includes('C')) gradeScore = 2;
+                    else if (gradeVal.includes('D')) gradeScore = 1;
+
+                    const baseHex = hextechData ? (hextechData.comprehensive || []).find(h => h.海克斯名称 === nameInfo) : null;
+                    const fallbackScore = baseHex ? (baseHex.综合得分 || baseHex.海克斯胜率 || 0) : 0;
+
+                    return {
+                        original: str,
+                        name: nameInfo,
+                        tier: tierName,
+                        grade: gradeVal,
+                        gradeScore: gradeScore,
+                        tags: tagGroup.split(/\s+/).filter(t => t),
+                        upvotes: upvotes,
+                        downvotes: downvotes,
+                        author: author,
+                        isOriginal: isOriginal,
+                        content: content,
+                        fallbackScore: fallbackScore
+                    };
+                }
+                return { original: str, name: "未知联动", gradeScore: -1, fallbackScore: 0, content: str };
+            });
+
+            parsedArticles.sort((a, b) => {
+                if (b.gradeScore !== a.gradeScore) {
+                    return b.gradeScore - a.gradeScore;
+                }
+                return b.fallbackScore - a.fallbackScore;
+            });
+
+            const html = parsedArticles.map(item => {
+                if (item.gradeScore === -1) {
+                    return `
+                        <div class="glass-panel rounded-xl p-4 border border-gray-800 hover:border-blue-500/30 transition-colors">
+                            <div class="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(item.content)}</div>
+                        </div>
+                    `;
+                }
+
+                let badgeBg = 'bg-[#8c9ba5]';
+                let badgeText = 'text-[#000000]';
+                if (item.gradeScore >= 5) {
+                    badgeBg = 'bg-[#ebd55b]';
+                    badgeText = 'text-[#000000]';
+                } else if (item.gradeScore === 4) {
+                    badgeBg = 'bg-[#9a73d1]';
+                    badgeText = 'text-[#ffffff]';
+                } else if (item.gradeScore === 3) {
+                    badgeBg = 'bg-[#4b7cf3]';
+                    badgeText = 'text-[#ffffff]';
+                }
+
+                const iconUrl = window.augmentIconMap && window.augmentIconMap[item.name]
+                    ? window.augmentIconMap[item.name]
+                    : `./assets/${encodeURIComponent(item.name)}.png`;
+                const safeName = escapeHtml(item.name);
+                const safeTier = escapeHtml(item.tier);
+                const safeGrade = escapeHtml(item.grade);
+                const safeAuthor = escapeHtml(item.author);
+
+                const getTagStyle = (tag) => {
+                    if (tag.includes('强力联动')) return 'border border-[#2bd5c2]/40 text-[#2bd5c2] bg-[#2bd5c2]/10';
+                    if (tag.includes('娱乐')) return 'border border-[#9a73d1]/40 text-[#9a73d1] bg-[#9a73d1]/10';
+                    if (tag.includes('陷阱')) return 'border border-[#e28544]/40 text-[#e28544] bg-[#e28544]/10';
+                    return 'border border-gray-500/40 text-gray-400 bg-gray-500/10';
+                };
+
+                return `
+<div class="hextech-card p-[1px] bg-[#151d2a] mb-4" style="clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));">
+    <div class="bg-[#060b10] p-5 flex gap-4" style="clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px)); min-height: 110px;">
+        
+        ${renderAugmentIcon(iconUrl, item.name, item.tier, 'detail')}
+
+        <div class="flex flex-col flex-grow">
+            <div class="flex items-start justify-between w-full">
+                
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <span class="text-white text-[16px] font-bold tracking-wide leading-none">${safeName}</span>
+                        <div class="${badgeBg} px-1.5 h-[20px] rounded flex items-center shadow-sm">
+                            <span class="${badgeText} text-[11px] font-black">${safeGrade}</span>
+                            <span class="${badgeText} opacity-70 text-[10px] font-black ml-[1px] pt-[1px]">?</span>
+                        </div>
+                        ${item.tags.map(tag => `<div class="${getTagStyle(tag)} px-1.5 h-[20px] rounded flex items-center text-[10px] font-bold">${escapeHtml(tag)}</div>`).join('')}
+                    </div>
+                    <div class="text-[#8c9ba5] text-[11px] mt-1.5 leading-none">
+                        ${safeTier}
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 mt-[-2px]">
+                    <div class="flex items-center bg-[#1e2333] border border-[#2a3040] rounded-full overflow-hidden h-[24px]">
+                        <div class="flex items-center gap-1.5 px-3 h-full border-r border-[#2a3040]">
+                            <svg class="w-3.5 h-3.5 text-[#507c59] fill-current" viewBox="0 0 16 16"><path d="M3 1.5A.5.5 0 0 1 3.5 1h9a.5.5 0 0 1 .4.82l-2 2.68 2 2.68a.5.5 0 0 1-.4.82h-9v6.5a.5.5 0 0 1-1 0v-13z"/></svg>
+                            <span class="text-[#8c9ba5] text-[12px] font-medium pt-0.5">${item.upvotes}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 px-3 h-full">
+                            <svg class="w-3.5 h-3.5 text-[#c29845] fill-current" viewBox="0 0 16 16"><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.605.69-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/></svg>
+                            <span class="text-[#8c9ba5] text-[12px] font-medium pt-0.5">${item.downvotes}</span>
+                        </div>
+                    </div>
+                    ${item.author ? `<div class="text-[#8c9ba5] text-[12px] flex items-center">作者: ${safeAuthor} ${item.isOriginal ? '<span class="bg-[#ebd55b] text-black px-1 py-[1px] rounded-[3px] ml-1.5 text-[10px] font-black tracking-wide leading-none pt-[3px]">原创</span>' : ''}</div>` : ''}
+                </div>
+
+            </div>
+
+            <div class="text-[#b3b9c6] text-[14px] leading-relaxed mt-3 w-content">
+                ${escapeHtml(item.content)}
+            </div>
+
+        </div>
+    </div>
+</div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function trapWheelOnScrollContainer(container) {
+            if (!container || container.dataset.wheelTrapBound === '1') {
+                return;
+            }
+
+            container.dataset.wheelTrapBound = '1';
+            container.addEventListener('wheel', (event) => {
+                const scrollTop = container.scrollTop;
+                const maxScrollTop = container.scrollHeight - container.clientHeight;
+                const deltaY = event.deltaY || 0;
+                const scrollingUp = deltaY < 0;
+                const scrollingDown = deltaY > 0;
+                const atTop = scrollTop <= 0;
+                const atBottom = scrollTop >= maxScrollTop - 1;
+                const canScroll = (scrollingUp && !atTop) || (scrollingDown && !atBottom);
+
+                if (!canScroll) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            }, { passive: false });
+        }
+
+        async function loadHextechs() {
+            if (!hero) {
+                document.getElementById('loadingSpinner').innerHTML = '<div class="text-red-400">错误：未获取到英雄名称</div>';
+                return;
+            }
+            try {
+                const [hextechRes, synergyRes, iconMapRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/champion/${encodeURIComponent(hero)}/hextechs`),
+                    fetch(`${API_BASE}/api/synergies/${encodeURIComponent(heroId || hero)}`),
+                    fetch(`${API_BASE}/api/augment_icon_map`)
+                ]);
+
+                hextechData = await hextechRes.json();
+                const synergyResult = await synergyRes.json();
+                synergyData = synergyResult.synergies || [];
+                window.augmentIconMap = await iconMapRes.json();
+
+                activeArray = hextechData.comprehensive || [];
+
+                document.getElementById('loadingSpinner').classList.add('hidden');
+                renderCurrentView();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loadingSpinner').classList.add('hidden');
+                document.getElementById('noDataTip').classList.remove('hidden');
+                document.querySelector('#noDataTip .text-xl').textContent = '数据加载失败';
+            }
+        }
+
+        function connectWS() {
+            ws = new WebSocket(WS_URL + '/ws');
+            window.wsInstance = ws;
+            const status = document.getElementById('wsStatus');
+            ws.onopen = () => { status.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span><span class="text-green-400">已连接</span>'; };
+            ws.onclose = () => { status.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full"></span><span class="text-red-400">已断开</span>'; setTimeout(connectWS, 3000); };
+            ws.onmessage = (e) => {
+                try {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type === 'data_updated') {
+                        console.log('收到 CSV 数据更新通知，自动热重载...');
+                        loadHextechs();
+                    } else if (msg.type === 'local_player_locked') {
+                        const enName = msg.en_name ? `&en=${encodeURIComponent(msg.en_name)}` : '';
+                        window.location.href = `detail.html?hero=${encodeURIComponent(msg.hero_name)}&id=${encodeURIComponent(msg.champion_id)}${enName}&auto=1`;
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+        }
+
+        window.onload = () => {
+            trapWheelOnScrollContainer(document.getElementById('compList'));
+            trapWheelOnScrollContainer(document.getElementById('synergyArticleScroll'));
+            loadHextechs();
+            connectWS();
+        };
+
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+
+    </script>
+</body>
+
+</html>

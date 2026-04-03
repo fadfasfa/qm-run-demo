@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hextech 极地枢纽 - 全英雄 T 度风云榜</title>
+    <link rel="preconnect" href="https://ddragon.leagueoflegends.com">
+    <link rel="preconnect" href="https://raw.communitydragon.org">
+    <link rel="preload" href="https://cdn.tailwindcss.com" as="script">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #11111b;
+            background-image: radial-gradient(circle at 50% 0%, rgba(137, 180, 250, 0.1), transparent 50%);
+            color: #cdd6f4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .glass-panel {
+            background: rgba(30, 30, 46, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tier-op { background: linear-gradient(135deg, #ff4e50, #f9d423); color: #111; text-shadow: 0 1px 2px rgba(255,255,255,0.5); }
+        .tier-s { background: linear-gradient(135deg, #c026d3, #db2777); color: white; }
+        .tier-a { background: linear-gradient(135deg, #2563eb, #06b6d4); color: white; }
+        .tier-npc { background: linear-gradient(135deg, #4b5563, #374151); color: #9ca3af; }
+        .tier-trash { background: linear-gradient(135deg, #7f1d1d, #450a0a); color: #f87171; border-right: 1px solid #7f1d1d; }
+
+        .champ-avatar {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .champ-avatar:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            border-color: #fff;
+            z-index: 10;
+        }
+
+        .champ-highlight {
+            box-shadow: 0 0 15px 2px rgba(234, 179, 8, 0.6) !important;
+            border-color: #facc15 !important;
+            transform: translateY(-2px) scale(1.05);
+            z-index: 20;
+        }
+
+        .scroll-container::-webkit-scrollbar { width: 8px; height: 8px; }
+        .scroll-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
+        .scroll-container::-webkit-scrollbar-thumb { background: rgba(137, 180, 250, 0.3); border-radius: 4px; }
+        .scroll-container::-webkit-scrollbar-thumb:hover { background: rgba(137, 180, 250, 0.5); }
+
+        .spinner {
+            border: 4px solid rgba(59, 130, 246, 0.3);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .search-empty-state {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(8, 8, 15, 0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            animation: searchPop 0.18s ease-out;
+        }
+
+        .search-empty-panel {
+            width: min(760px, 100%);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            max-height: calc(100vh - 2.5rem);
+            overflow-y: auto;
+            background:
+                linear-gradient(180deg, rgba(24, 24, 37, 0.96), rgba(17, 17, 27, 0.96)),
+                rgba(30, 30, 46, 0.72);
+            box-shadow:
+                0 24px 60px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .search-empty-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.12);
+            color: #93c5fd;
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .search-empty-title {
+            margin-top: 1rem;
+            font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+            font-weight: 800;
+            color: #f8fafc;
+        }
+
+        .search-empty-text {
+            margin-top: 0.75rem;
+            line-height: 1.8;
+            color: #cbd5e1;
+        }
+
+        .search-empty-input-wrap {
+            margin-top: 1.5rem;
+        }
+
+        .search-empty-input {
+            width: 100%;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.82);
+            color: #fff;
+            padding: 1rem 1.15rem 1rem 3rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .search-empty-input:focus {
+            outline: none;
+            border-color: rgba(96, 165, 250, 0.8);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+        }
+
+        .search-empty-icon {
+            position: absolute;
+            left: 1.1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 1rem;
+            pointer-events: none;
+        }
+
+        .search-empty-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .search-chip {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.68);
+            color: #cbd5e1;
+            border-radius: 999px;
+            padding: 0.55rem 0.9rem;
+            font-size: 0.88rem;
+            transition: all 0.18s ease;
+        }
+
+        .search-chip:hover {
+            transform: translateY(-1px);
+            border-color: rgba(96, 165, 250, 0.55);
+            background: rgba(30, 41, 59, 0.95);
+            color: #fff;
+        }
+
+        .search-assist-panel {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% + 0.85rem);
+            z-index: 70;
+            border-radius: 1.2rem;
+            display: none;
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            box-shadow: 0 22px 50px rgba(0, 0, 0, 0.38);
+            overflow: hidden;
+        }
+
+        .search-assist-panel.search-assist-open {
+            display: block;
+        }
+
+        .search-assist-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.9rem 1rem 0.75rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .search-assist-title {
+            color: #e2e8f0;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .search-assist-subtitle {
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        .search-assist-list {
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 0.35rem;
+        }
+
+        .search-assist-item {
+            width: 100%;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.85rem 0.9rem;
+            border-radius: 0.9rem;
+            color: #cbd5e1;
+            background: transparent;
+            transition: background 0.16s ease, transform 0.16s ease, color 0.16s ease;
+        }
+
+        .search-assist-item:hover {
+            background: rgba(51, 65, 85, 0.9);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .search-assist-item-main {
+            display: flex;
+            flex-direction: column;
+            gap: 0.12rem;
+            min-width: 0;
+        }
+
+        .search-assist-item-title {
+            font-weight: 700;
+            font-size: 0.96rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-assist-item-meta {
+            font-size: 0.76rem;
+            color: #94a3b8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-assist-tag {
+            flex-shrink: 0;
+            font-size: 0.74rem;
+            border-radius: 999px;
+            padding: 0.2rem 0.55rem;
+            background: rgba(59, 130, 246, 0.14);
+            color: #93c5fd;
+        }
+
+        @keyframes searchPop {
+            from {
+                opacity: 0;
+                transform: scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6 pb-20">
+
+    <header class="max-w-5xl mx-auto mb-8 flex flex-col items-center justify-center space-y-6 mt-4">
+        <div class="flex items-center space-x-3">
+            <div class="w-3 h-3 rounded-full bg-green-400 shadow-[0_0_10px_#4ade80] animate-pulse"></div>
+            <span class="font-black text-2xl tracking-widest text-white">HEXTECH <span class="text-blue-500">NEXUS</span></span>
+        </div>
+
+        <div class="relative w-full max-w-2xl group">
+            <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+            <input type="text" id="searchInput" placeholder="搜英雄看海克斯... (支持拼音如：ys / 外号如：快乐风男)"
+                   class="search-input relative w-full bg-[#181825] border-2 border-gray-700 text-lg rounded-full py-4 px-6 text-white placeholder-gray-500 transition-all shadow-xl">
+            <span class="absolute right-6 top-4 text-2xl opacity-70">搜索</span>
+        </div>
+        <p class="text-xs text-gray-500 font-mono tracking-widest">实时数据已应用「微量贝叶斯平滑+Z-Score」提纯</p>
+
+        <div id="wsStatus" class="flex items-center space-x-2 text-xs">
+            <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
+            <span class="text-gray-400">WS 待连接</span>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto space-y-3" id="tierContainer">
+        <div class="flex flex-col items-center justify-center py-20">
+            <div class="spinner mb-4"></div>
+            <div class="text-gray-400 font-bold tracking-widest">加载英雄数据中...</div>
+        </div>
+    </main>
+
+    <div id="searchOverlay" class="hidden"></div>
+
+    <script>
+        const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin;
+        const WS_URL = window.location.protocol === 'file:' ? 'ws://localhost:8000' : 'ws://' + (window.location.host || 'localhost:8000');
+
+        let ddVersion = '14.3.1';
+        let currentSearchQuery = '';
+        const searchOverlay = document.getElementById('searchOverlay');
+        const searchAssistPanel = document.getElementById('searchAssistPanel');
+        let searchOverlayBlurLockUntil = 0;
+        let searchShortcutCatalog = [];
+        let championSearchIndex = new Map();
+        let championAliasRecords = [];
+        let championCoreIndex = new Map();
+
+        fetch('https://ddragon.leagueoflegends.com/api/versions.json')
+            .then(r => r.json())
+            .then(v => { if (v && v[0]) ddVersion = v[0]; })
+            .catch(() => {});
+
+        let allChampions = [];
+        let activeChampionIds = new Set();
+        let ws = null;
+
+        const TIERS = [
+            { id: 't0', name: '夯', enName: 'God Tier', cssClass: 'tier-op', minScore: 1.5 },
+            { id: 't1', name: '顶级', enName: 'Top', cssClass: 'tier-s', minScore: 0.8 },
+            { id: 't2', name: '人上人', enName: 'Elite', cssClass: 'tier-a', minScore: 0.3 },
+            { id: 't3', name: 'npc', enName: 'Average', cssClass: 'tier-npc', minScore: -0.3 },
+            { id: 't4', name: '拉', enName: 'Trash', cssClass: 'tier-trash', minScore: -Infinity }
+        ];
+
+        const CHAMPION_PINYIN = {
+            '亚索': 'Yasuo', '永恩': 'Yone', '阿狸': 'Ahri', '阿卡丽': 'Akali',
+            '卡莎': 'Kaisa', '伊泽瑞尔': 'Ezreal', '卢锡安': 'Lucian', '薇恩': 'Vayne',
+            '金克丝': 'Jinx', '凯特琳': 'Caitlyn', '艾希': 'Ashe', '烬': 'Jhin',
+            '拉克丝': 'Lux', '盲僧': 'LeeSin', '李青': 'LeeSin',
+            '劫': 'Zed', '泰隆': 'Talon', '卡特琳娜': 'Katarina',
+            '盖伦': 'Garen', '德莱厄斯': 'Darius', '诺手': 'Darius', '腕豪': 'Sett',
+            '提莫': 'Teemo', '崔丝塔娜': 'Tristana', '小炮': 'Tristana',
+            '维迦': 'Veigar', '小法师': 'Veigar', '吉格斯': 'Ziggs', '爆破鬼才': 'Ziggs',
+            '凯南': 'Kennen', '慎': 'Shen', '暮光之眼': 'Shen',
+            '阿木木': 'Amumu', '茂凯': 'Maokai', '大树': 'Maokai',
+            '艾尼维亚': 'Anivia', '冰鸟': 'Anivia', '沃利贝尔': 'Volibear', '狗熊': 'Volibear',
+            '古拉加斯': 'Gragas', '酒桶': 'Gragas', '特朗德尔': 'Trundle', '巨魔之王': 'Trundle',
+            '沃里克': 'Warwick', '狼人': 'Warwick',
+            '布里茨': 'Blitzcrank', '蒸汽机器人': 'Blitzcrank', '瑟提': 'Sett',
+            '萨勒芬妮': 'Seraphine', '娑娜': 'Sona', '琴女': 'Sona',
+            '卡尔玛': 'Karma', '天启者': 'Karma', '迦娜': 'Janna', '风女': 'Janna',
+            '璐璐': 'Lulu', '基兰': 'Zilean', '时光守护者': 'Zilean',
+            '黑默丁格': 'Heimerdinger', '大头': 'Heimerdinger',
+            '卡萨丁': 'Kassadin', '马尔扎哈': 'Malzahar', '先知': 'Malzahar',
+            '科加斯': 'Chogath', '大虫子': 'Chogath', '雷克顿': 'Renekton', '鳄鱼': 'Renekton',
+            '内瑟斯': 'Nasus', '狗头': 'Nasus', '瑟庄妮': 'Sejuani', '猪妹': 'Sejuani',
+            '布隆': 'Braum', '弗雷尔卓德之心': 'Braum', '丽桑卓': 'Lissandra', '冰裔': 'Lissandra',
+            '艾翁': 'Ivern', '翠神': 'Ivern', '妮蔻': 'Neeko', '万花通灵': 'Neeko',
+            '佐伊': 'Zoe', '暮光星灵': 'Zoe', '瑞兹': 'Ryze', '符文法师': 'Ryze',
+            '卡莉丝塔': 'Kalista', '复仇之矛': 'Kalista', '莎弥拉': 'Samira', '沙漠玫瑰': 'Samira',
+            '厄斐琉斯': 'Aphelios', '残月之肃': 'Aphelios', '赛娜': 'Senna', '涤魂圣枪': 'Senna',
+            '奇亚娜': 'Qiyana', '元素女皇': 'Qiyana', '悠米': 'Yuumi', '魔法猫咪': 'Yuumi',
+            '潘森': 'Pantheon', '不屈之枪': 'Pantheon',
+            '佛耶戈': 'Viego', '破败之王': 'Viego', '格温': 'Gwen', '灵罗娃娃': 'Gwen',
+            '阿克尚': 'Akshan', '影哨': 'Akshan', '薇古丝': 'Vex', '愁云使者': 'Vex',
+            '泽丽': 'Zeri', '霓虹之女': 'Zeri', '卑尔维斯': 'Belveth', '女皇终结者': 'Belveth',
+            '纳亚菲利': 'Naafiri', '百裂冥犬': 'Naafiri', '奎桑提': 'KSante', '纳祖芒': 'KSante',
+            '奥瑞利安索尔': 'AurelionSol', '铸星龙王': 'AurelionSol', '龙王': 'AurelionSol',
+            '蝎子': 'Skarner', '斯卡纳': 'Skarner',
+        };
+
+        window.onload = () => {
+            loadChampions();
+            connectWS();
+            setupSearch();
+        };
+
+        async function loadChampions() {
+            try {
+                const [championRes, aliasRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/champions`),
+                    fetch(`${API_BASE}/api/champion_aliases`).catch(() => null),
+                ]);
+                const res = championRes;
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                allChampions = await res.json();
+                championCoreIndex = buildChampionCoreIndex(allChampions);
+                championAliasRecords = aliasRes && aliasRes.ok ? await aliasRes.json() : [];
+                if (!Array.isArray(championAliasRecords) || championAliasRecords.length === 0) {
+                    championAliasRecords = await loadAliasRecordsFromStaticFiles();
+                }
+                if (!Array.isArray(championAliasRecords) || championAliasRecords.length === 0) {
+                    championAliasRecords = buildFallbackAliasRecords(allChampions);
+                }
+                searchShortcutCatalog = buildSearchShortcutCatalog(allChampions, championAliasRecords);
+                console.log('[INFO] 加载英雄数据成功，共', allChampions.length, '个英雄');
+                renderTiers(allChampions);
+            } catch (err) {
+                console.error('[ERROR] 加载英雄数据失败:', err);
+                document.getElementById('tierContainer').innerHTML = `
+                    <div class="text-center py-20 text-red-400">
+                        <div class="text-4xl mb-4">警告</div>
+                        <div class="font-bold text-xl">数据加载失败</div>
+                        <div class="text-sm mt-2">请确保后端服务已启动</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderTiers(champions) {
+            const container = document.getElementById('tierContainer');
+            if (!container) return;
+
+            if (champions.length === 0) {
+                container.innerHTML = '';
+                hideSearchAssistPanel();
+                return;
+            }
+
+            hideSearchOverlay();
+
+            const sorted = [...champions].sort((a, b) => b['综合分数'] - a['综合分数']);
+
+            const tierGroups = {};
+            TIERS.forEach(t => tierGroups[t.id] = []);
+
+            sorted.forEach(champ => {
+                const tier = getTier(champ['综合分数']);
+                tierGroups[tier.id].push(champ);
+            });
+
+            container.innerHTML = '';
+            TIERS.forEach(tier => {
+                const champs = tierGroups[tier.id];
+                if (champs.length === 0) return;
+
+                const grayscaleClass = '';
+                const opacityClass = '';
+
+                const champHTML = champs.map((c, i) => createChampionCard(c, i)).join('');
+
+                container.innerHTML += `
+                    <div class="flex bg-[#181825] rounded-xl border border-gray-800 shadow-lg overflow-hidden ${opacityClass} ${grayscaleClass}">
+                        <div class="w-24 shrink-0 ${tier.cssClass} flex flex-col items-center justify-center font-bold text-xl shadow-[2px_0_10px_rgba(0,0,0,0.3)] z-10">
+                            <span>${tier.name}</span>
+                            <span class="text-[9px] opacity-80 mt-1 uppercase tracking-wider">${tier.enName}</span>
+                        </div>
+                        <div class="flex-1 p-3 flex flex-wrap gap-3">
+                            ${champHTML}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeSearchText(value) {
+            return String(value || '')
+                .toLowerCase()
+                .replace(/[\s·_\-()/【】\[\]（）]/g, '')
+                .trim();
+        }
+
+        function buildChampionCoreIndex(champions) {
+            const index = new Map();
+            champions.forEach((champ) => {
+                const heroName = normalizeSearchText(champ['英雄名称'] || '');
+                const enName = normalizeSearchText(champ['英文名'] || '');
+                const heroId = String(champ['英雄 ID'] || '');
+                const entry = {
+                    heroName: champ['英雄名称'] || '',
+                    enName: champ['英文名'] || '',
+                    heroId
+                };
+                if (heroName) index.set(heroName, entry);
+                if (enName) index.set(enName, entry);
+                if (heroId) index.set(heroId, entry);
+            });
+            return index;
+        }
+
+        async function loadJsonFromCandidates(paths) {
+            for (const path of paths) {
+                try {
+                    const response = await fetch(path, { cache: 'no-store' });
+                    if (!response.ok) continue;
+                    return await response.json();
+                } catch (_) {}
+            }
+            return null;
+        }
+
+        async function loadAliasRecordsFromStaticFiles() {
+            const coreData = await loadJsonFromCandidates([
+                '../config/Champion_Core_Data.json',
+                '/static/Champion_Core_Data.json',
+                './Champion_Core_Data.json'
+            ]);
+
+            if (!coreData || typeof coreData !== 'object') {
+                return [];
+            }
+
+            return Object.values(coreData).map((entry) => ({
+                title: entry.name || '',
+                heroName: entry.title || '',
+                enName: entry.en_name || '',
+                heroId: String(entry.id || entry.hero_id || ''),
+                aliases: Array.isArray(entry.aliases) ? entry.aliases : []
+            }));
+        }
+
+        function buildFallbackAliasRecords(champions) {
+            const fallback = [
+                ['潘森', ['ps', 'panshen', 'pantheon', '不屈之枪']],
+                ['亚索', ['ys', 'yasuo', '快乐风男', '疾风剑豪']],
+            ];
+
+            return fallback.map(([heroName, aliases]) => {
+                const champ = champions.find((item) => normalizeSearchText(item['英雄名称'] || '') === normalizeSearchText(heroName));
+                return {
+                    title: heroName,
+                    heroName,
+                    enName: champ ? (champ['英文名'] || '') : '',
+                    heroId: champ ? (champ['英雄 ID'] || '') : '',
+                    aliases
+                };
+            });
+        }
+
+        function buildSearchShortcutCatalog(champions, aliasRecords = []) {
+            const catalog = [];
+            const seen = new Set();
+            const championByEn = new Map();
+            const championByName = new Map();
+            championSearchIndex = new Map();
+
+            champions.forEach((champ) => {
+                const heroName = champ['英雄名称'] || '';
+                const enName = champ['英文名'] || '';
+                const heroId = champ['英雄 ID'] || '';
+                const popularity = Number(champ['综合分数'] || 0);
+                const normalizedHeroName = normalizeSearchText(heroName);
+                const normalizedEnName = normalizeSearchText(enName);
+                const searchTerms = new Set();
+
+                if (heroName) {
+                    const key = `name:${heroName}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        catalog.push({
+                            label: heroName,
+                            query: heroName,
+                            meta: enName ? `英雄名 · ${enName}` : '英雄名',
+                            heroName,
+                            popularity,
+                            kind: '英雄名',
+                            heroId
+                        });
+                    }
+                    championByName.set(normalizedHeroName, champ);
+                    searchTerms.add(normalizedHeroName);
+                }
+
+                if (enName) {
+                    const key = `en:${enName}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        catalog.push({
+                            label: enName,
+                            query: heroName || enName,
+                            meta: heroName ? `英文名 · ${heroName}` : '英文名',
+                            heroName,
+                            popularity: popularity - 0.1,
+                            kind: '英文名',
+                            heroId
+                        });
+                    }
+                    championByEn.set(normalizedEnName, champ);
+                    championByName.set(normalizedEnName, champ);
+                    searchTerms.add(normalizedEnName);
+                }
+
+                championSearchIndex.set(normalizedHeroName || normalizedEnName || heroId, searchTerms);
+            });
+
+            const aliasSource = Array.isArray(aliasRecords) ? aliasRecords : [];
+            aliasSource.forEach((record) => {
+                const heroName = String(record.heroName || '').trim();
+                const enName = String(record.enName || '').trim();
+                const heroId = String(record.heroId || '').trim();
+                const aliases = Array.isArray(record.aliases) ? record.aliases : [];
+                const titleName = String(record.title || '').trim();
+                const champ = championByName.get(normalizeSearchText(heroName)) ||
+                    championByEn.get(normalizeSearchText(enName)) ||
+                    championCoreIndex.get(normalizeSearchText(titleName));
+                const canonicalHeroName = champ ? (champ['英雄名称'] || heroName || enName) : (heroName || enName);
+                const canonicalEnName = champ ? (champ['英文名'] || enName) : enName;
+                const canonicalHeroId = champ ? (champ['英雄 ID'] || heroId) : heroId;
+                const popularity = champ ? Number(champ['综合分数'] || 0) + 1.5 : 0.3;
+                const heroKey = normalizeSearchText(canonicalHeroName || canonicalEnName || heroId);
+                const searchTerms = championSearchIndex.get(heroKey) || new Set();
+
+                if (canonicalHeroName) searchTerms.add(normalizeSearchText(canonicalHeroName));
+                if (canonicalEnName) searchTerms.add(normalizeSearchText(canonicalEnName));
+
+                aliases.forEach((alias) => {
+                    const normalizedAlias = normalizeSearchText(alias);
+                    if (!normalizedAlias) return;
+                    searchTerms.add(normalizedAlias);
+                    const key = `alias:${heroKey}:${normalizedAlias}`;
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    catalog.push({
+                        label: alias,
+                        query: canonicalHeroName || alias,
+                        meta: canonicalHeroName ? `别名 · ${canonicalHeroName}` : '别名',
+                        heroName: canonicalHeroName,
+                        popularity,
+                        kind: '别名',
+                        heroId: canonicalHeroId
+                    });
+                });
+
+                championSearchIndex.set(heroKey, searchTerms);
+            });
+
+            Object.entries(CHAMPION_PINYIN).forEach(([shortcut, enName]) => {
+                const champ = championByEn.get(normalizeSearchText(enName));
+                const heroName = champ ? (champ['英雄名称'] || '') : '';
+                const heroId = champ ? (champ['英雄 ID'] || '') : '';
+                const key = `shortcut:${shortcut}->${heroName || enName}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    catalog.push({
+                        label: shortcut,
+                        query: heroName || shortcut,
+                        meta: heroName ? `快捷词 · ${heroName}` : `快捷词 · ${enName}`,
+                        heroName,
+                        popularity: heroName ? (champ['综合分数'] || 0) + 1.5 : 0.2,
+                        kind: '快捷词',
+                        heroId
+                    });
+                }
+            });
+
+            return catalog;
+        }
+
+        function matchesSearchToken(token, normalizedQuery) {
+            if (!token || !normalizedQuery) {
+                return false;
+            }
+            if (token === normalizedQuery) {
+                return true;
+            }
+            if (normalizedQuery.length === 1) {
+                return token.includes(normalizedQuery);
+            }
+            if (normalizedQuery.length <= 2) {
+                return token.startsWith(normalizedQuery);
+            }
+            return token.includes(normalizedQuery);
+        }
+
+        function getSearchSuggestions(query, limit = 12) {
+            const normalizedQuery = normalizeSearchText(query);
+            const source = searchShortcutCatalog.length ? searchShortcutCatalog : [];
+            const ranked = source
+                .map((item) => {
+                    const haystack = normalizeSearchText(`${item.label} ${item.meta} ${item.heroName} ${item.query}`);
+                    if (!normalizedQuery) {
+                        return { ...item, score: item.popularity || 0 };
+                    }
+
+                    let score = -1;
+                    if (haystack === normalizedQuery) {
+                        score = 1000;
+                    } else if (haystack.startsWith(normalizedQuery)) {
+                        score = 800;
+                    } else if (haystack.includes(normalizedQuery)) {
+                        score = 500;
+                    } else {
+                        return null;
+                    }
+
+                    return { ...item, score };
+                })
+                .filter(Boolean)
+                .sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    return (b.popularity || 0) - (a.popularity || 0);
+                });
+
+            return ranked.slice(0, limit);
+        }
+
+        function renderSearchAssistPanel(query) {
+            if (!searchAssistPanel) return;
+
+            const suggestions = getSearchSuggestions(query, 10);
+            const normalizedQuery = normalizeSearchText(query);
+            if (!normalizedQuery) {
+                hideSearchAssistPanel();
+                return;
+            }
+            const title = normalizedQuery ? '快捷匹配' : '热门快捷搜索';
+            const subtitle = normalizedQuery
+                ? `找到 ${suggestions.length} 个可直接点选的结果`
+                : '点击即可直接切换搜索';
+
+            if (suggestions.length === 0) {
+                searchAssistPanel.innerHTML = `
+                    <div class="search-assist-header">
+                        <div>
+                            <div class="search-assist-title">${title}</div>
+                            <div class="search-assist-subtitle">${subtitle}</div>
+                        </div>
+                        <button type="button" class="search-assist-tag" data-search-close>收起</button>
+                    </div>
+                    <div class="search-assist-list">
+                        <div class="px-4 py-6 text-sm text-gray-400">没有匹配到快捷词，可以继续输入。</div>
+                    </div>
+                `;
+                searchAssistPanel.classList.remove('hidden');
+                bindSearchAssistPanel();
+                return;
+            }
+
+            searchAssistPanel.innerHTML = `
+                <div class="search-assist-header">
+                    <div>
+                        <div class="search-assist-title">${title}</div>
+                        <div class="search-assist-subtitle">${subtitle}</div>
+                    </div>
+                    <button type="button" class="search-assist-tag" data-search-close>收起</button>
+                </div>
+                <div class="search-assist-list">
+                    ${suggestions.map((item) => `
+                        <button type="button"
+                            class="search-assist-item"
+                            data-search-apply="${escapeHtml(item.query)}"
+                            title="${escapeHtml(item.meta)}">
+                            <div class="search-assist-item-main">
+                                <div class="search-assist-item-title">${escapeHtml(item.label)}</div>
+                                <div class="search-assist-item-meta">${escapeHtml(item.meta)}</div>
+                            </div>
+                            <span class="search-assist-tag">${escapeHtml(item.kind)}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+            searchAssistPanel.classList.remove('hidden');
+            bindSearchAssistPanel();
+        }
+
+        function hideSearchAssistPanel() {
+            if (!searchAssistPanel) return;
+            searchAssistPanel.classList.remove('search-assist-open');
+            searchAssistPanel.classList.add('hidden');
+            searchAssistPanel.innerHTML = '';
+        }
+
+        function bindSearchAssistPanel() {
+            if (!searchAssistPanel) return;
+            const closeBtn = searchAssistPanel.querySelector('[data-search-close]');
+            const suggestionButtons = searchAssistPanel.querySelectorAll('[data-search-apply]');
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    hideSearchAssistPanel();
+                });
+            }
+
+            suggestionButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    const nextQuery = button.getAttribute('data-search-apply') || '';
+                    applySearchQuery(nextQuery);
+                    const input = document.getElementById('searchInput');
+                    if (input) input.focus();
+                });
+            });
+        }
+
+        function renderNoResultsPanel(query) {
+            const safeQuery = escapeHtml(query);
+            const chips = getSearchSuggestions(query, 12)
+                .map((item) => `<button type="button" class="search-chip" data-search-chip="${escapeHtml(item.query)}">${escapeHtml(item.label)}</button>`)
+                .join('');
+
+            return `
+                <section class="search-empty-state">
+                    <div class="search-empty-panel glass-panel">
+                        <div class="search-empty-eyebrow">搜索未命中</div>
+                        <h2 class="search-empty-title">没有找到「${safeQuery}」</h2>
+                        <p class="search-empty-text">
+                            可以换个英雄名、外号、拼音或简称继续搜索。下面这些快捷词都能直接点。
+                        </p>
+                        <div class="search-empty-input-wrap relative">
+                            <span class="search-empty-icon">搜索</span>
+                            <input
+                                id="emptySearchInput"
+                                type="text"
+                                value="${safeQuery}"
+                                placeholder="继续搜索英雄..."
+                                class="search-empty-input"
+                                autocomplete="off"
+                                spellcheck="false"
+                            >
+                        </div>
+                        <div class="search-empty-actions">
+                            ${chips}
+                            <button type="button" class="search-chip" data-search-clear>清空搜索</button>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function showSearchOverlay(query) {
+            if (!searchOverlay) return;
+            searchOverlay.innerHTML = renderNoResultsPanel(query);
+            searchOverlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            bindNoResultsSearchPanel();
+        }
+
+        function hideSearchOverlay() {
+            if (!searchOverlay) return;
+            searchOverlay.classList.add('hidden');
+            searchOverlay.innerHTML = '';
+            document.body.style.overflow = '';
+        }
+
+        function bindNoResultsSearchPanel() {
+            const input = document.getElementById('emptySearchInput');
+            const clearBtn = searchOverlay?.querySelector('[data-search-clear]');
+            const chips = searchOverlay ? searchOverlay.querySelectorAll('[data-search-chip]') : [];
+
+            if (input) {
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+                const assist = document.getElementById('searchAssistPanel');
+                if (assist) assist.classList.remove('search-assist-open');
+                input.addEventListener('compositionstart', () => {
+                    input.dataset.composing = '1';
+                    const assist = document.getElementById('searchAssistPanel');
+                    if (assist) assist.classList.remove('search-assist-open');
+                });
+                input.addEventListener('compositionend', () => {
+                    input.dataset.composing = '';
+                    const assist = document.getElementById('searchAssistPanel');
+                    if (assist) assist.classList.remove('search-assist-open');
+                    applySearchQuery(input.value);
+                });
+                input.addEventListener('input', () => {
+                    if (input.dataset.composing === '1') return;
+                    const assist = document.getElementById('searchAssistPanel');
+                    if (assist) assist.classList.remove('search-assist-open');
+                    applySearchQuery(input.value);
+                });
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const assist = document.getElementById('searchAssistPanel');
+                        const rawQuery = String(e.target.value || '').trim();
+                        const isImeConfirm = e.isComposing || input.dataset.composing === '1';
+                        input.dataset.composing = '';
+                        if (isImeConfirm) {
+                            if (assist) assist.classList.remove('search-assist-open');
+                            applySearchQuery(rawQuery);
+                            return;
+                        }
+                        applySearchQuery(rawQuery);
+                        if (assist && rawQuery.length >= 2 && filterChampions(rawQuery).length === 0) {
+                            assist.classList.add('search-assist-open');
+                        } else if (assist) {
+                            assist.classList.remove('search-assist-open');
+                        }
+                    }
+                });
+                input.addEventListener('blur', () => {
+                    if (performance.now() < searchOverlayBlurLockUntil) {
+                        return;
+                    }
+                    if (input.dataset.skipBlurSync === '1') {
+                        input.dataset.skipBlurSync = '';
+                        return;
+                    }
+                    input.dataset.composing = '';
+                    const assist = document.getElementById('searchAssistPanel');
+                    if (assist) assist.classList.remove('search-assist-open');
+                    applySearchQuery(input.value);
+                });
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                });
+                clearBtn.addEventListener('click', () => {
+                    searchOverlayBlurLockUntil = performance.now() + 250;
+                    if (input) {
+                        input.dataset.skipBlurSync = '1';
+                        input.dataset.composing = '';
+                        input.value = '';
+                    }
+                    applySearchQuery('');
+                    const topInput = document.getElementById('searchInput');
+                    if (topInput) {
+                        topInput.focus();
+                    }
+                    if (input) {
+                        window.setTimeout(() => {
+                            input.dataset.skipBlurSync = '';
+                        }, 0);
+                    }
+                });
+            }
+
+            chips.forEach((chip) => {
+                chip.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                });
+                chip.addEventListener('click', () => {
+                    searchOverlayBlurLockUntil = performance.now() + 250;
+                    if (input) {
+                        input.dataset.skipBlurSync = '1';
+                        input.dataset.composing = '';
+                    }
+                    const nextQuery = chip.getAttribute('data-search-chip') || '';
+                    applySearchQuery(nextQuery);
+                    const topInput = document.getElementById('searchInput');
+                    if (topInput) {
+                        topInput.focus();
+                    }
+                    if (input) {
+                        window.setTimeout(() => {
+                            input.dataset.skipBlurSync = '';
+                        }, 0);
+                    }
+                });
+            });
+        }
+
+        function filterChampions(query) {
+            const normalizedQuery = normalizeSearchText(query);
+            if (!normalizedQuery) {
+                return allChampions;
+            }
+
+            return allChampions.filter(c => {
+                const name = c['英雄名称'] || '';
+                const enName = c['英文名'] || '';
+                const heroKey = normalizeSearchText(name) || normalizeSearchText(enName);
+                const indexedTerms = championSearchIndex.get(heroKey) || new Set();
+                const directAliasHit = heroKey === normalizedQuery || indexedTerms.has(normalizedQuery);
+
+                if (directAliasHit) {
+                    return true;
+                }
+
+                if (indexedTerms.size > 0) {
+                    for (const term of indexedTerms) {
+                        if (matchesSearchToken(term, normalizedQuery)) {
+                            return true;
+                        }
+                    }
+                }
+
+                return matchesSearchToken(normalizeSearchText(name), normalizedQuery) ||
+                    matchesSearchToken(normalizeSearchText(enName), normalizedQuery);
+            });
+        }
+
+        function applySearchQuery(rawQuery) {
+            const nextQuery = String(rawQuery || '').trim();
+            currentSearchQuery = nextQuery;
+
+            const topInput = document.getElementById('searchInput');
+            if (topInput && topInput.value !== rawQuery) {
+                topInput.value = rawQuery;
+            }
+
+            if (!nextQuery) {
+                hideSearchOverlay();
+                renderTiers(allChampions);
+                return;
+            }
+
+            const filtered = filterChampions(nextQuery);
+            renderTiers(filtered);
+        }
+
+        function createChampionCard(champion, index) {
+            const heroId = champion['英雄 ID'] || '';
+            const enName = champion['英文名'] || CHAMPION_PINYIN[champion['英雄名称']] || '';
+            const wr = formatPercent(champion['贝叶斯胜率']);
+            const heroName = String(champion['英雄名称'] || '');
+
+            const detailUrl = `detail.html?hero=${encodeURIComponent(heroName)}&wr=${encodeURIComponent(wr)}&pr=${encodeURIComponent(formatPercent(champion['英雄出场率']))}&id=${encodeURIComponent(heroId)}&en=${encodeURIComponent(enName)}`;
+
+            const isHighlighted = activeChampionIds.has(String(heroId)) ? 'champ-highlight' : '';
+
+            let avatarUrl;
+            if (heroId) {
+                avatarUrl = `./assets/${heroId}.png`;
+            } else if (enName) {
+                avatarUrl = `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/img/champion/${enName}.png`;
+            } else {
+                avatarUrl = createPlaceholder(heroName);
+            }
+
+            const safeHeroName = escapeHtml(heroName);
+            const safeDetailUrl = escapeHtml(detailUrl);
+            const safeAvatarUrl = escapeHtml(avatarUrl);
+            const safeHeroNameAttr = escapeHtml(heroName);
+            const safeWr = escapeHtml(wr);
+
+            return `
+                <a
+                    href="${safeDetailUrl}"
+                    class="champ-avatar relative w-16 h-16 sm:w-18 sm:h-18 rounded-lg overflow-hidden border-2 cursor-pointer block flex-shrink-0 ${isHighlighted}"
+                    style="animation-delay: ${index * 30}ms"
+                    title="${safeHeroName} (${safeWr})"
+                >
+                    <img
+                        src="${safeAvatarUrl}"
+                        alt="${safeHeroNameAttr}"
+                        class="w-full h-full object-cover bg-gray-800"
+                        data-hero-name="${safeHeroNameAttr}"
+                        onerror="handleAvatarError(this)"
+                    />
+                    <div class="absolute bottom-0 inset-x-0 bg-black/80 text-center text-[10px] font-bold text-yellow-400 py-0.5 backdrop-blur-sm">
+                        ${safeWr}
+                    </div>
+                </a>
+            `;
+        }
+
+        function createPlaceholder(name) {
+            const rawInitial = String(name || '?').trim().charAt(0) || '?';
+            const initial = /[A-Za-z0-9\u4e00-\u9fff]/.test(rawInitial) ? rawInitial : '?';
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text x="50" y="55" text-anchor="middle" fill="%23666" font-size="40">${escapeHtml(initial)}</text></svg>`;
+            return 'data:image/svg+xml,' + encodeURIComponent(svg);
+        }
+
+        function handleAvatarError(imgElement) {
+            if (imgElement.dataset.errorHandled === 'true') return;
+            imgElement.dataset.errorHandled = 'true';
+            imgElement.src = createPlaceholder(imgElement.dataset.heroName || imgElement.alt || '?');
+        }
+
+        function formatPercent(num) {
+            return (num * 100).toFixed(1) + '%';
+        }
+
+        function getTier(score) {
+            for (const tier of TIERS) {
+                if (score >= tier.minScore) return tier;
+            }
+            return TIERS[TIERS.length - 1];
+        }
+
+        function connectWS() {
+            ws = new WebSocket(WS_URL + '/ws');
+            const status = document.getElementById('wsStatus');
+
+            ws.onopen = () => {
+                status.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span><span class="text-green-400">已连接</span>';
+            };
+
+            ws.onclose = () => {
+                status.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full"></span><span class="text-red-400">已断开</span>';
+                setTimeout(connectWS, 3000);
+            };
+
+            ws.onmessage = (e) => {
+                try {
+                    const message = JSON.parse(e.data);
+                    console.log('[WS] 收到消息:', message);
+
+                    if (message.type === 'champion_update') {
+                        activeChampionIds = new Set(message.champion_ids.map(String));
+                        renderTiers(allChampions);
+                    } else if (message.type === 'data_updated') {
+                        console.log('[WS] 数据已更新，重新加载...');
+                        loadChampions();
+                    } else if (message.type === 'local_player_locked') {
+                        const heroName = message.hero_name;
+                        const championId = message.champion_id;
+                        const heroData = allChampions.find(c => c['英雄名称'] === heroName);
+                        if (heroData) {
+                            const wr = formatPercent(heroData['贝叶斯胜率']);
+                            const pr = formatPercent(heroData['英雄出场率']);
+                            const enName = heroData['英文名'] || CHAMPION_PINYIN[heroName] || '';
+                            const heroId = heroData['英雄 ID'] || '';
+
+                            console.log('[WS] 本地玩家锁定:', heroName, '-> 自动跳转详情页');
+                            window.location.href = `detail.html?hero=${encodeURIComponent(heroName)}&wr=${encodeURIComponent(wr)}&pr=${encodeURIComponent(pr)}&id=${encodeURIComponent(heroId)}&en=${encodeURIComponent(enName)}&auto=1`;
+                        }
+                    }
+                } catch (err) {
+                    console.error('[WS] 解析消息失败:', err);
+                }
+            };
+        }
+
+        function setupSearch() {
+            const input = document.getElementById('searchInput');
+            if (!input) return;
+
+            input.addEventListener('compositionstart', () => {
+                input.dataset.composing = '1';
+            });
+
+            input.addEventListener('compositionend', () => {
+                input.dataset.composing = '';
+                window.setTimeout(() => applySearchQuery(input.value), 0);
+            });
+
+            input.addEventListener('input', (e) => {
+                if (input.dataset.composing === '1') return;
+                applySearchQuery(e.target.value);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    applySearchQuery(e.target.value);
+                    if (searchAssistPanel && !searchAssistPanel.classList.contains('hidden')) {
+                        hideSearchAssistPanel();
+                    }
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                if (input.dataset.composing === '1') return;
+                applySearchQuery(input.value);
+                window.setTimeout(() => {
+                    if (document.activeElement !== input) {
+                        hideSearchAssistPanel();
+                    }
+                }, 180);
+            });
+
+            document.addEventListener('click', (e) => {
+                const target = e.target;
+                const insideSearch = target && (target.closest?.('#searchAssistPanel') || target.closest?.('#searchInput'));
+                if (!insideSearch && searchAssistPanel) {
+                    hideSearchAssistPanel();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
