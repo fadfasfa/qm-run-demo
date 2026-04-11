@@ -10,8 +10,13 @@ env/
 ENV/
 
 # Local runtime data
-run/config/
-run/assets/
+run/config/browser_profile/
+run/config/web_server_port.txt
+run/config/startup_status.json
+run/config/Hextech_Data_*.csv
+run/config/*.log
+run/config/*.tmp
+run/config/*.lock
 run/build/
 run/dist/
 run/*.log

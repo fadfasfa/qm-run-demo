@@ -1,0 +1,1477 @@
+[
+  {
+    "heroName": "万花通灵",
+    "title": "妮蔻",
+    "enName": "Neeko",
+    "heroId": "518",
+    "aliases": []
+  },
+  {
+    "heroName": "上古领主",
+    "title": "斯卡纳",
+    "enName": "Skarner",
+    "heroId": "72",
+    "aliases": []
+  },
+  {
+    "heroName": "不屈之枪",
+    "title": "潘森",
+    "enName": "Pantheon",
+    "heroId": "80",
+    "aliases": []
+  },
+  {
+    "heroName": "不灭狂雷",
+    "title": "沃利贝尔",
+    "enName": "Volibear",
+    "heroId": "106",
+    "aliases": []
+  },
+  {
+    "heroName": "不破之誓",
+    "title": "芸阿娜",
+    "enName": "Yunara",
+    "heroId": "804",
+    "aliases": []
+  },
+  {
+    "heroName": "不祥之刃",
+    "title": "卡特琳娜",
+    "enName": "Katarina",
+    "heroId": "55",
+    "aliases": [
+      "kt",
+      "卡特"
+    ]
+  },
+  {
+    "heroName": "不羁之悦",
+    "title": "尼菈",
+    "enName": "Nilah",
+    "heroId": "895",
+    "aliases": []
+  },
+  {
+    "heroName": "不落魔锋",
+    "title": "亚恒",
+    "enName": "Zaahen",
+    "heroId": "904",
+    "aliases": []
+  },
+  {
+    "heroName": "九尾妖狐",
+    "title": "阿狸",
+    "enName": "Ahri",
+    "heroId": "103",
+    "aliases": [
+      "hl",
+      "huli",
+      "狐狸",
+      "刮痧师傅"
+    ]
+  },
+  {
+    "heroName": "亡灵战神",
+    "title": "赛恩",
+    "enName": "Sion",
+    "heroId": "14",
+    "aliases": []
+  },
+  {
+    "heroName": "仙灵女巫",
+    "title": "璐璐",
+    "enName": "Lulu",
+    "heroId": "117",
+    "aliases": [
+      "ll",
+      "露露",
+      "紫皮大蒜"
+    ]
+  },
+  {
+    "heroName": "众星之子",
+    "title": "索拉卡",
+    "enName": "Soraka",
+    "heroId": "16",
+    "aliases": []
+  },
+  {
+    "heroName": "傲之追猎者",
+    "title": "雷恩加尔",
+    "enName": "Rengar",
+    "heroId": "107",
+    "aliases": [
+      "sg",
+      "狮子狗"
+    ]
+  },
+  {
+    "heroName": "元素女皇",
+    "title": "奇亚娜",
+    "enName": "Qiyana",
+    "heroId": "246",
+    "aliases": []
+  },
+  {
+    "heroName": "光辉女郎",
+    "title": "拉克丝",
+    "enName": "Lux",
+    "heroId": "99",
+    "aliases": []
+  },
+  {
+    "heroName": "兽灵行者",
+    "title": "乌迪尔",
+    "enName": "Udyr",
+    "heroId": "77",
+    "aliases": []
+  },
+  {
+    "heroName": "冰晶凤凰",
+    "title": "艾尼维亚",
+    "enName": "Anivia",
+    "heroId": "34",
+    "aliases": [
+      "fh",
+      "冰鸟"
+    ]
+  },
+  {
+    "heroName": "冰霜女巫",
+    "title": "丽桑卓",
+    "enName": "Lissandra",
+    "heroId": "127",
+    "aliases": [
+      "ls",
+      "冰女"
+    ]
+  },
+  {
+    "heroName": "刀锋之影",
+    "title": "泰隆",
+    "enName": "Talon",
+    "heroId": "91",
+    "aliases": []
+  },
+  {
+    "heroName": "刀锋舞者",
+    "title": "艾瑞莉娅",
+    "enName": "Irelia",
+    "heroId": "39",
+    "aliases": [
+      "dm",
+      "刀妹"
+    ]
+  },
+  {
+    "heroName": "北地之怒",
+    "title": "瑟庄妮",
+    "enName": "Sejuani",
+    "heroId": "113",
+    "aliases": []
+  },
+  {
+    "heroName": "卡牌大师",
+    "title": "崔斯特",
+    "enName": "TwistedFate",
+    "heroId": "4",
+    "aliases": [
+      "kp",
+      "kapai",
+      "卡牌"
+    ]
+  },
+  {
+    "heroName": "双界灵兔",
+    "title": "阿萝拉",
+    "enName": "Aurora",
+    "heroId": "893",
+    "aliases": []
+  },
+  {
+    "heroName": "发条魔灵",
+    "title": "奥莉安娜",
+    "enName": "Orianna",
+    "heroId": "61",
+    "aliases": []
+  },
+  {
+    "heroName": "含羞蓓蕾",
+    "title": "莉莉娅",
+    "enName": "Lillia",
+    "heroId": "876",
+    "aliases": []
+  },
+  {
+    "heroName": "唤潮鲛姬",
+    "title": "娜美",
+    "enName": "Nami",
+    "heroId": "267",
+    "aliases": []
+  },
+  {
+    "heroName": "圣枪游侠",
+    "title": "卢锡安",
+    "enName": "Lucian",
+    "heroId": "236",
+    "aliases": [
+      "xao",
+      "奥巴马"
+    ]
+  },
+  {
+    "heroName": "圣锤之毅",
+    "title": "波比",
+    "enName": "Poppy",
+    "heroId": "78",
+    "aliases": []
+  },
+  {
+    "heroName": "堕落天使",
+    "title": "莫甘娜",
+    "enName": "Morgana",
+    "heroId": "25",
+    "aliases": []
+  },
+  {
+    "heroName": "复仇之矛",
+    "title": "卡莉丝塔",
+    "enName": "Kalista",
+    "heroId": "429",
+    "aliases": [
+      "hlst",
+      "滑板鞋"
+    ]
+  },
+  {
+    "heroName": "复仇焰魂",
+    "title": "布兰德",
+    "enName": "Brand",
+    "heroId": "63",
+    "aliases": []
+  },
+  {
+    "heroName": "大发明家",
+    "title": "黑默丁格",
+    "enName": "Heimerdinger",
+    "heroId": "74",
+    "aliases": [
+      "ht",
+      "大头"
+    ]
+  },
+  {
+    "heroName": "天启者",
+    "title": "卡尔玛",
+    "enName": "Karma",
+    "heroId": "43",
+    "aliases": []
+  },
+  {
+    "heroName": "奥术先驱",
+    "title": "维克托",
+    "enName": "Viktor",
+    "heroId": "112",
+    "aliases": []
+  },
+  {
+    "heroName": "寒冰射手",
+    "title": "艾希",
+    "enName": "Ashe",
+    "heroId": "22",
+    "aliases": [
+      "hb",
+      "寒冰",
+      "刮痧女王"
+    ]
+  },
+  {
+    "heroName": "封魔剑魂",
+    "title": "永恩",
+    "enName": "Yone",
+    "heroId": "777",
+    "aliases": []
+  },
+  {
+    "heroName": "山隐之焰",
+    "title": "奥恩",
+    "enName": "Ornn",
+    "heroId": "516",
+    "aliases": []
+  },
+  {
+    "heroName": "岩雀",
+    "title": "塔莉垭",
+    "enName": "Taliyah",
+    "heroId": "163",
+    "aliases": []
+  },
+  {
+    "heroName": "巨魔之王",
+    "title": "特朗德尔",
+    "enName": "Trundle",
+    "heroId": "48",
+    "aliases": []
+  },
+  {
+    "heroName": "幻翎",
+    "title": "洛",
+    "enName": "Rakan",
+    "heroId": "497",
+    "aliases": []
+  },
+  {
+    "heroName": "异画师",
+    "title": "彗",
+    "enName": "Hwei",
+    "heroId": "910",
+    "aliases": []
+  },
+  {
+    "heroName": "弗雷尔卓德之心",
+    "title": "布隆",
+    "enName": "Braum",
+    "heroId": "201",
+    "aliases": []
+  },
+  {
+    "heroName": "影哨",
+    "title": "阿克尚",
+    "enName": "Akshan",
+    "heroId": "166",
+    "aliases": []
+  },
+  {
+    "heroName": "影流之主",
+    "title": "劫",
+    "enName": "Zed",
+    "heroId": "238",
+    "aliases": []
+  },
+  {
+    "heroName": "影流之镰",
+    "title": "凯隐",
+    "enName": "Kayn",
+    "heroId": "141",
+    "aliases": []
+  },
+  {
+    "heroName": "德玛西亚之力",
+    "title": "盖伦",
+    "enName": "Garen",
+    "heroId": "86",
+    "aliases": [
+      "gl",
+      "大宝剑"
+    ]
+  },
+  {
+    "heroName": "德玛西亚之翼",
+    "title": "奎因",
+    "enName": "Quinn",
+    "heroId": "133",
+    "aliases": []
+  },
+  {
+    "heroName": "德玛西亚皇子",
+    "title": "嘉文四世",
+    "enName": "JarvanIV",
+    "heroId": "59",
+    "aliases": [
+      "hz",
+      "huangzi",
+      "皇子",
+      "周杰伦",
+      "嘉文"
+    ]
+  },
+  {
+    "heroName": "德邦总管",
+    "title": "赵信",
+    "enName": "XinZhao",
+    "heroId": "5",
+    "aliases": []
+  },
+  {
+    "heroName": "恶魔小丑",
+    "title": "萨科",
+    "enName": "Shaco",
+    "heroId": "35",
+    "aliases": [
+      "xc",
+      "小丑"
+    ]
+  },
+  {
+    "heroName": "惩戒之箭",
+    "title": "韦鲁斯",
+    "enName": "Varus",
+    "heroId": "110",
+    "aliases": []
+  },
+  {
+    "heroName": "愁云使者",
+    "title": "薇古丝",
+    "enName": "Vex",
+    "heroId": "711",
+    "aliases": [
+      "gx",
+      "熬夜波比"
+    ]
+  },
+  {
+    "heroName": "戏命师",
+    "title": "烬",
+    "enName": "Jhin",
+    "heroId": "202",
+    "aliases": [
+      "jh",
+      "瘸子",
+      "四哥"
+    ]
+  },
+  {
+    "heroName": "战争之影",
+    "title": "赫卡里姆",
+    "enName": "Hecarim",
+    "heroId": "120",
+    "aliases": []
+  },
+  {
+    "heroName": "战争女神",
+    "title": "希维尔",
+    "enName": "Sivir",
+    "heroId": "15",
+    "aliases": []
+  },
+  {
+    "heroName": "扭曲树精",
+    "title": "茂凯",
+    "enName": "Maokai",
+    "heroId": "57",
+    "aliases": []
+  },
+  {
+    "heroName": "披甲龙龟",
+    "title": "拉莫斯",
+    "enName": "Rammus",
+    "heroId": "33",
+    "aliases": [
+      "lg",
+      "龙龟"
+    ]
+  },
+  {
+    "heroName": "探险家",
+    "title": "伊泽瑞尔",
+    "enName": "Ezreal",
+    "heroId": "81",
+    "aliases": [
+      "ez",
+      "txj",
+      "小黄毛"
+    ]
+  },
+  {
+    "heroName": "放逐之刃",
+    "title": "锐雯",
+    "enName": "Riven",
+    "heroId": "92",
+    "aliases": [
+      "rw",
+      "瑞文"
+    ]
+  },
+  {
+    "heroName": "无双剑姬",
+    "title": "菲奥娜",
+    "enName": "Fiora",
+    "heroId": "114",
+    "aliases": [
+      "jj",
+      "剑姬"
+    ]
+  },
+  {
+    "heroName": "无极剑圣",
+    "title": "易",
+    "enName": "MasterYi",
+    "heroId": "11",
+    "aliases": [
+      "js",
+      "jiansheng",
+      "剑圣",
+      "易大师",
+      "疯狗"
+    ]
+  },
+  {
+    "heroName": "无畏战车",
+    "title": "厄加特",
+    "enName": "Urgot",
+    "heroId": "6",
+    "aliases": []
+  },
+  {
+    "heroName": "时光守护者",
+    "title": "基兰",
+    "enName": "Zilean",
+    "heroId": "26",
+    "aliases": [
+      "zl",
+      "时光老头"
+    ]
+  },
+  {
+    "heroName": "时间刺客",
+    "title": "艾克",
+    "enName": "Ekko",
+    "heroId": "245",
+    "aliases": []
+  },
+  {
+    "heroName": "明烛",
+    "title": "米利欧",
+    "enName": "Milio",
+    "heroId": "902",
+    "aliases": []
+  },
+  {
+    "heroName": "星界游神",
+    "title": "巴德",
+    "enName": "Bard",
+    "heroId": "432",
+    "aliases": []
+  },
+  {
+    "heroName": "星籁歌姬",
+    "title": "萨勒芬妮",
+    "enName": "Seraphine",
+    "heroId": "147",
+    "aliases": [
+      "sfl",
+      "轮椅女"
+    ]
+  },
+  {
+    "heroName": "暗夜猎手",
+    "title": "薇恩",
+    "enName": "Vayne",
+    "heroId": "67",
+    "aliases": [
+      "vn",
+      "洗澡狗",
+      "乌兹"
+    ]
+  },
+  {
+    "heroName": "暗裔剑魔",
+    "title": "亚托克斯",
+    "enName": "Aatrox",
+    "heroId": "266",
+    "aliases": []
+  },
+  {
+    "heroName": "暗黑元首",
+    "title": "辛德拉",
+    "enName": "Syndra",
+    "heroId": "134",
+    "aliases": [
+      "xdr",
+      "球女"
+    ]
+  },
+  {
+    "heroName": "暮光之眼",
+    "title": "慎",
+    "enName": "Shen",
+    "heroId": "98",
+    "aliases": []
+  },
+  {
+    "heroName": "暮光星灵",
+    "title": "佐伊",
+    "enName": "Zoe",
+    "heroId": "142",
+    "aliases": []
+  },
+  {
+    "heroName": "暴怒骑士",
+    "title": "克烈",
+    "enName": "Kled",
+    "heroId": "240",
+    "aliases": []
+  },
+  {
+    "heroName": "暴走萝莉",
+    "title": "金克丝",
+    "enName": "Jinx",
+    "heroId": "222",
+    "aliases": [
+      "jks"
+    ]
+  },
+  {
+    "heroName": "曙光女神",
+    "title": "蕾欧娜",
+    "enName": "Leona",
+    "heroId": "89",
+    "aliases": [
+      "rn",
+      "日女"
+    ]
+  },
+  {
+    "heroName": "未来守护者",
+    "title": "杰斯",
+    "enName": "Jayce",
+    "heroId": "126",
+    "aliases": []
+  },
+  {
+    "heroName": "机械公敌",
+    "title": "兰博",
+    "enName": "Rumble",
+    "heroId": "68",
+    "aliases": []
+  },
+  {
+    "heroName": "正义天使",
+    "title": "凯尔",
+    "enName": "Kayle",
+    "heroId": "10",
+    "aliases": []
+  },
+  {
+    "heroName": "正义巨像",
+    "title": "加里奥",
+    "enName": "Galio",
+    "heroId": "3",
+    "aliases": [
+      "jl"
+    ]
+  },
+  {
+    "heroName": "武器大师",
+    "title": "贾克斯",
+    "enName": "Jax",
+    "heroId": "24",
+    "aliases": [
+      "wq",
+      "武器"
+    ]
+  },
+  {
+    "heroName": "死亡颂唱者",
+    "title": "卡尔萨斯",
+    "enName": "Karthus",
+    "heroId": "30",
+    "aliases": [
+      "ks",
+      "死歌"
+    ]
+  },
+  {
+    "heroName": "殇之木乃伊",
+    "title": "阿木木",
+    "enName": "Amumu",
+    "heroId": "32",
+    "aliases": []
+  },
+  {
+    "heroName": "残月之肃",
+    "title": "厄斐琉斯",
+    "enName": "Aphelios",
+    "heroId": "523",
+    "aliases": []
+  },
+  {
+    "heroName": "永恒梦魇",
+    "title": "魔腾",
+    "enName": "Nocturne",
+    "heroId": "56",
+    "aliases": [
+      "梦魇"
+    ]
+  },
+  {
+    "heroName": "永猎双子",
+    "title": "千珏",
+    "enName": "Kindred",
+    "heroId": "203",
+    "aliases": []
+  },
+  {
+    "heroName": "沙漠死神",
+    "title": "内瑟斯",
+    "enName": "Nasus",
+    "heroId": "75",
+    "aliases": [
+      "gt",
+      "狗头"
+    ]
+  },
+  {
+    "heroName": "沙漠玫瑰",
+    "title": "莎弥拉",
+    "enName": "Samira",
+    "heroId": "360",
+    "aliases": []
+  },
+  {
+    "heroName": "沙漠皇帝",
+    "title": "阿兹尔",
+    "enName": "Azir",
+    "heroId": "268",
+    "aliases": [
+      "sh",
+      "沙皇",
+      "黄鸡"
+    ]
+  },
+  {
+    "heroName": "河流之王",
+    "title": "塔姆",
+    "enName": "TahmKench",
+    "heroId": "223",
+    "aliases": [
+      "hm",
+      "蛤蟆"
+    ]
+  },
+  {
+    "heroName": "法外狂徒",
+    "title": "格雷福斯",
+    "enName": "Graves",
+    "heroId": "104",
+    "aliases": []
+  },
+  {
+    "heroName": "流光镜影",
+    "title": "梅尔",
+    "enName": "Mel",
+    "heroId": "800",
+    "aliases": []
+  },
+  {
+    "heroName": "海兽祭司",
+    "title": "俄洛伊",
+    "enName": "Illaoi",
+    "heroId": "420",
+    "aliases": [
+      "cm",
+      "触手妈"
+    ]
+  },
+  {
+    "heroName": "海洋之灾",
+    "title": "普朗克",
+    "enName": "Gangplank",
+    "heroId": "41",
+    "aliases": [
+      "cp",
+      "船长",
+      "gp"
+    ]
+  },
+  {
+    "heroName": "涤魂圣枪",
+    "title": "赛娜",
+    "enName": "Senna",
+    "heroId": "235",
+    "aliases": []
+  },
+  {
+    "heroName": "深海泰坦",
+    "title": "诺提勒斯",
+    "enName": "Nautilus",
+    "heroId": "111",
+    "aliases": []
+  },
+  {
+    "heroName": "深渊巨口",
+    "title": "克格莫",
+    "enName": "KogMaw",
+    "heroId": "96",
+    "aliases": [
+      "dm",
+      "大嘴"
+    ]
+  },
+  {
+    "heroName": "潮汐海灵",
+    "title": "菲兹",
+    "enName": "Fizz",
+    "heroId": "105",
+    "aliases": [
+      "xz",
+      "小鱼人",
+      "鱼人"
+    ]
+  },
+  {
+    "heroName": "灵罗娃娃",
+    "title": "格温",
+    "enName": "Gwen",
+    "heroId": "887",
+    "aliases": [
+      "剪刀妹"
+    ]
+  },
+  {
+    "heroName": "炼金术士",
+    "title": "辛吉德",
+    "enName": "Singed",
+    "heroId": "27",
+    "aliases": [
+      "lj",
+      "炼金",
+      "搅屎棍"
+    ]
+  },
+  {
+    "heroName": "炼金男爵",
+    "title": "烈娜塔 · 戈拉斯克",
+    "enName": "Renata",
+    "heroId": "888",
+    "aliases": [
+      "烈娜塔",
+      "renataglasc"
+    ]
+  },
+  {
+    "heroName": "炽炎雏龙",
+    "title": "斯莫德",
+    "enName": "Smolder",
+    "heroId": "901",
+    "aliases": [
+      "smd",
+      "小火龙"
+    ]
+  },
+  {
+    "heroName": "熔岩巨兽",
+    "title": "墨菲特",
+    "enName": "Malphite",
+    "heroId": "54",
+    "aliases": [
+      "str",
+      "石头人",
+      "混子"
+    ]
+  },
+  {
+    "heroName": "爆破鬼才",
+    "title": "吉格斯",
+    "enName": "Ziggs",
+    "heroId": "115",
+    "aliases": [
+      "zj",
+      "炸弹人"
+    ]
+  },
+  {
+    "heroName": "牛头酋长",
+    "title": "阿利斯塔",
+    "enName": "Alistar",
+    "heroId": "12",
+    "aliases": [
+      "nt",
+      "牛头"
+    ]
+  },
+  {
+    "heroName": "牧魂人",
+    "title": "约里克",
+    "enName": "Yorick",
+    "heroId": "83",
+    "aliases": []
+  },
+  {
+    "heroName": "狂厄蔷薇",
+    "title": "贝蕾亚",
+    "enName": "Briar",
+    "heroId": "233",
+    "aliases": []
+  },
+  {
+    "heroName": "狂战士",
+    "title": "奥拉夫",
+    "enName": "Olaf",
+    "heroId": "2",
+    "aliases": []
+  },
+  {
+    "heroName": "狂暴之心",
+    "title": "凯南",
+    "enName": "Kennen",
+    "heroId": "85",
+    "aliases": [
+      "kn",
+      "电耗子"
+    ]
+  },
+  {
+    "heroName": "狂野女猎手",
+    "title": "奈德丽",
+    "enName": "Nidalee",
+    "heroId": "76",
+    "aliases": [
+      "bo",
+      "豹女",
+      "奶大力"
+    ]
+  },
+  {
+    "heroName": "猩红收割者",
+    "title": "弗拉基米尔",
+    "enName": "Vladimir",
+    "heroId": "8",
+    "aliases": []
+  },
+  {
+    "heroName": "琴瑟仙女",
+    "title": "娑娜",
+    "enName": "Sona",
+    "heroId": "37",
+    "aliases": [
+      "qn",
+      "琴女",
+      "36d"
+    ]
+  },
+  {
+    "heroName": "瓦洛兰之盾",
+    "title": "塔里克",
+    "enName": "Taric",
+    "heroId": "44",
+    "aliases": []
+  },
+  {
+    "heroName": "生化魔人",
+    "title": "扎克",
+    "enName": "Zac",
+    "heroId": "154",
+    "aliases": [
+      "果冻"
+    ]
+  },
+  {
+    "heroName": "疾风剑豪",
+    "title": "亚索",
+    "enName": "Yasuo",
+    "heroId": "157",
+    "aliases": [
+      "ys",
+      "快乐风男",
+      "孤儿",
+      "风男"
+    ]
+  },
+  {
+    "heroName": "痛苦之拥",
+    "title": "伊芙琳",
+    "enName": "Evelynn",
+    "heroId": "28",
+    "aliases": [
+      "寡妇"
+    ]
+  },
+  {
+    "heroName": "瘟疫之源",
+    "title": "图奇",
+    "enName": "Twitch",
+    "heroId": "29",
+    "aliases": [
+      "ls",
+      "laoshu",
+      "老鼠"
+    ]
+  },
+  {
+    "heroName": "百裂冥犬",
+    "title": "纳亚菲利",
+    "enName": "Naafiri",
+    "heroId": "950",
+    "aliases": [
+      "nfl",
+      "nafiri",
+      "狗"
+    ]
+  },
+  {
+    "heroName": "皎月女神",
+    "title": "黛安娜",
+    "enName": "Diana",
+    "heroId": "131",
+    "aliases": [
+      "jy",
+      "皎月"
+    ]
+  },
+  {
+    "heroName": "皮城女警",
+    "title": "凯特琳",
+    "enName": "Caitlyn",
+    "heroId": "51",
+    "aliases": [
+      "nj",
+      "女警"
+    ]
+  },
+  {
+    "heroName": "皮城执法官",
+    "title": "蔚",
+    "enName": "Vi",
+    "heroId": "254",
+    "aliases": [
+      "w"
+    ]
+  },
+  {
+    "heroName": "盲僧",
+    "title": "李青",
+    "enName": "LeeSin",
+    "heroId": "64",
+    "aliases": [
+      "ms",
+      "mangseng",
+      "瞎子",
+      "xiazi"
+    ]
+  },
+  {
+    "heroName": "破败之王",
+    "title": "佛耶戈",
+    "enName": "Viego",
+    "heroId": "234",
+    "aliases": [
+      "fyg",
+      "王大爷"
+    ]
+  },
+  {
+    "heroName": "祖安怒兽",
+    "title": "沃里克",
+    "enName": "Warwick",
+    "heroId": "19",
+    "aliases": []
+  },
+  {
+    "heroName": "祖安狂人",
+    "title": "蒙多医生",
+    "enName": "DrMundo",
+    "heroId": "36",
+    "aliases": []
+  },
+  {
+    "heroName": "祖安花火",
+    "title": "泽丽",
+    "enName": "Zeri",
+    "heroId": "221",
+    "aliases": []
+  },
+  {
+    "heroName": "离群之刺",
+    "title": "阿卡丽",
+    "enName": "Akali",
+    "heroId": "84",
+    "aliases": []
+  },
+  {
+    "heroName": "符文法师",
+    "title": "瑞兹",
+    "enName": "Ryze",
+    "heroId": "13",
+    "aliases": []
+  },
+  {
+    "heroName": "纳祖芒荣耀",
+    "title": "奎桑提",
+    "enName": "KSante",
+    "heroId": "897",
+    "aliases": []
+  },
+  {
+    "heroName": "翠神",
+    "title": "艾翁",
+    "enName": "Ivern",
+    "heroId": "427",
+    "aliases": []
+  },
+  {
+    "heroName": "腕豪",
+    "title": "瑟提",
+    "enName": "Sett",
+    "heroId": "875",
+    "aliases": [
+      "劲夫"
+    ]
+  },
+  {
+    "heroName": "英勇投弹手",
+    "title": "库奇",
+    "enName": "Corki",
+    "heroId": "42",
+    "aliases": [
+      "fj",
+      "feiji",
+      "飞机"
+    ]
+  },
+  {
+    "heroName": "荆棘之兴",
+    "title": "婕拉",
+    "enName": "Zyra",
+    "heroId": "143",
+    "aliases": []
+  },
+  {
+    "heroName": "荒漠屠夫",
+    "title": "雷克顿",
+    "enName": "Renekton",
+    "heroId": "58",
+    "aliases": []
+  },
+  {
+    "heroName": "荣耀行刑官",
+    "title": "德莱文",
+    "enName": "Draven",
+    "heroId": "119",
+    "aliases": [
+      "dw"
+    ]
+  },
+  {
+    "heroName": "蒸汽机器人",
+    "title": "布里茨",
+    "enName": "Blitzcrank",
+    "heroId": "53",
+    "aliases": [
+      "jqr",
+      "机器人"
+    ]
+  },
+  {
+    "heroName": "虚空之女",
+    "title": "卡莎",
+    "enName": "Kaisa",
+    "heroId": "145",
+    "aliases": []
+  },
+  {
+    "heroName": "虚空之眼",
+    "title": "维克兹",
+    "enName": "Velkoz",
+    "heroId": "161",
+    "aliases": [
+      "dk",
+      "大眼"
+    ]
+  },
+  {
+    "heroName": "虚空先知",
+    "title": "玛尔扎哈",
+    "enName": "Malzahar",
+    "heroId": "90",
+    "aliases": []
+  },
+  {
+    "heroName": "虚空女皇",
+    "title": "卑尔维斯",
+    "enName": "Belveth",
+    "heroId": "200",
+    "aliases": [
+      "女皇"
+    ]
+  },
+  {
+    "heroName": "虚空恐惧",
+    "title": "科加斯",
+    "enName": "Chogath",
+    "heroId": "31",
+    "aliases": [
+      "cg",
+      "大虫子"
+    ]
+  },
+  {
+    "heroName": "虚空掠夺者",
+    "title": "卡兹克",
+    "enName": "Khazix",
+    "heroId": "121",
+    "aliases": [
+      "kzx",
+      "螳螂"
+    ]
+  },
+  {
+    "heroName": "虚空行者",
+    "title": "卡萨丁",
+    "enName": "Kassadin",
+    "heroId": "38",
+    "aliases": []
+  },
+  {
+    "heroName": "虚空遁地兽",
+    "title": "雷克塞",
+    "enName": "RekSai",
+    "heroId": "421",
+    "aliases": [
+      "ks",
+      "挖掘机"
+    ]
+  },
+  {
+    "heroName": "蛮族之王",
+    "title": "泰达米尔",
+    "enName": "Tryndamere",
+    "heroId": "23",
+    "aliases": [
+      "mw",
+      "manwang",
+      "蛮王",
+      "蛮三刀"
+    ]
+  },
+  {
+    "heroName": "蜘蛛女皇",
+    "title": "伊莉丝",
+    "enName": "Elise",
+    "heroId": "60",
+    "aliases": [
+      "蜘蛛"
+    ]
+  },
+  {
+    "heroName": "血港鬼影",
+    "title": "派克",
+    "enName": "Pyke",
+    "heroId": "555",
+    "aliases": []
+  },
+  {
+    "heroName": "解脱者",
+    "title": "塞拉斯",
+    "enName": "Sylas",
+    "heroId": "517",
+    "aliases": [
+      "蒜男"
+    ]
+  },
+  {
+    "heroName": "诡术妖姬",
+    "title": "乐芙兰",
+    "enName": "Leblanc",
+    "heroId": "7",
+    "aliases": [
+      "yj",
+      "yaoji",
+      "妖姬",
+      "一条链子"
+    ]
+  },
+  {
+    "heroName": "诺克萨斯之手",
+    "title": "德莱厄斯",
+    "enName": "Darius",
+    "heroId": "122",
+    "aliases": [
+      "ns",
+      "nuoshou",
+      "诺手",
+      "大白腿"
+    ]
+  },
+  {
+    "heroName": "诺克萨斯统领",
+    "title": "斯维因",
+    "enName": "Swain",
+    "heroId": "50",
+    "aliases": []
+  },
+  {
+    "heroName": "赏金猎人",
+    "title": "厄运小姐",
+    "enName": "MissFortune",
+    "heroId": "21",
+    "aliases": [
+      "hh",
+      "mf",
+      "好运姐",
+      "女枪"
+    ]
+  },
+  {
+    "heroName": "迅捷斥候",
+    "title": "提莫",
+    "enName": "Teemo",
+    "heroId": "17",
+    "aliases": [
+      "tm",
+      "timo",
+      "种蘑菇的"
+    ]
+  },
+  {
+    "heroName": "远古巫灵",
+    "title": "泽拉斯",
+    "enName": "Xerath",
+    "heroId": "101",
+    "aliases": []
+  },
+  {
+    "heroName": "远古恐惧",
+    "title": "费德提克",
+    "enName": "Fiddlesticks",
+    "heroId": "9",
+    "aliases": [
+      "稻草人",
+      "草人"
+    ]
+  },
+  {
+    "heroName": "迷失之牙",
+    "title": "纳尔",
+    "enName": "Gnar",
+    "heroId": "150",
+    "aliases": []
+  },
+  {
+    "heroName": "逆羽",
+    "title": "霞",
+    "enName": "Xayah",
+    "heroId": "498",
+    "aliases": []
+  },
+  {
+    "heroName": "邪恶小法师",
+    "title": "维迦",
+    "enName": "Veigar",
+    "heroId": "45",
+    "aliases": [
+      "xf",
+      "小法"
+    ]
+  },
+  {
+    "heroName": "酒桶",
+    "title": "古拉加斯",
+    "enName": "Gragas",
+    "heroId": "79",
+    "aliases": []
+  },
+  {
+    "heroName": "铁血狼母",
+    "title": "安蓓萨",
+    "enName": "Ambessa",
+    "heroId": "799",
+    "aliases": []
+  },
+  {
+    "heroName": "铁铠冥魂",
+    "title": "莫德凯撒",
+    "enName": "Mordekaiser",
+    "heroId": "82",
+    "aliases": [
+      "铁男"
+    ]
+  },
+  {
+    "heroName": "铸星龙王",
+    "title": "奥瑞利安·索尔",
+    "enName": "AurelionSol",
+    "heroId": "136",
+    "aliases": []
+  },
+  {
+    "heroName": "镕铁少女",
+    "title": "芮尔",
+    "enName": "Rell",
+    "heroId": "526",
+    "aliases": []
+  },
+  {
+    "heroName": "雪原双子",
+    "title": "努努和威朗普",
+    "enName": "Nunu",
+    "heroId": "20",
+    "aliases": [
+      "nr",
+      "努努",
+      "雪人"
+    ]
+  },
+  {
+    "heroName": "青钢影",
+    "title": "卡蜜尔",
+    "enName": "Camille",
+    "heroId": "164",
+    "aliases": [
+      "kmr",
+      "剪刀腿"
+    ]
+  },
+  {
+    "heroName": "风暴之怒",
+    "title": "迦娜",
+    "enName": "Janna",
+    "heroId": "40",
+    "aliases": [
+      "fn",
+      "风女"
+    ]
+  },
+  {
+    "heroName": "魂锁典狱长",
+    "title": "锤石",
+    "enName": "Thresh",
+    "heroId": "412",
+    "aliases": []
+  },
+  {
+    "heroName": "魔法猫咪",
+    "title": "悠米",
+    "enName": "Yuumi",
+    "heroId": "350",
+    "aliases": []
+  },
+  {
+    "heroName": "魔蛇之拥",
+    "title": "卡西奥佩娅",
+    "enName": "Cassiopeia",
+    "heroId": "69",
+    "aliases": []
+  },
+  {
+    "heroName": "麦林炮手",
+    "title": "崔丝塔娜",
+    "enName": "Tristana",
+    "heroId": "18",
+    "aliases": []
+  },
+  {
+    "heroName": "黑暗之女",
+    "title": "安妮",
+    "enName": "Annie",
+    "heroId": "1",
+    "aliases": []
+  },
+  {
+    "heroName": "齐天大圣",
+    "title": "孙悟空",
+    "enName": "MonkeyKing",
+    "heroId": "62",
+    "aliases": []
+  },
+  {
+    "heroName": "龙血武姬",
+    "title": "希瓦娜",
+    "enName": "Shyvana",
+    "heroId": "102",
+    "aliases": [
+      "lvn",
+      "龙女"
+    ]
+  }
+]
