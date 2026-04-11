@@ -515,6 +515,16 @@
         }
 
         async function loadAliasRecordsFromStaticFiles() {
+            const aliasIndex = await loadJsonFromCandidates([
+                '../config/Champion_Alias_Index.json',
+                '/static/Champion_Alias_Index.json',
+                './Champion_Alias_Index.json'
+            ]);
+
+            if (Array.isArray(aliasIndex)) {
+                return aliasIndex;
+            }
+
             const coreData = await loadJsonFromCandidates([
                 '../config/Champion_Core_Data.json',
                 '/static/Champion_Core_Data.json',
@@ -1032,7 +1042,7 @@
             } else if (enName) {
                 avatarUrl = `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/img/champion/${enName}.png`;
             } else {
-                avatarUrl = createPlaceholder(heroName);
+                avatarUrl = '';
             }
 
             const safeHeroName = escapeHtml(heroName);
@@ -1040,6 +1050,7 @@
             const safeAvatarUrl = escapeHtml(avatarUrl);
             const safeHeroNameAttr = escapeHtml(heroName);
             const safeWr = escapeHtml(wr);
+            const avatarHiddenStyle = avatarUrl ? '' : 'visibility:hidden;';
 
             return `
                 <a
@@ -1052,27 +1063,15 @@
                         src="${safeAvatarUrl}"
                         alt="${safeHeroNameAttr}"
                         class="w-full h-full object-cover bg-gray-800"
+                        style="${avatarHiddenStyle}"
                         data-hero-name="${safeHeroNameAttr}"
-                        onerror="handleAvatarError(this)"
+                        onerror="this.removeAttribute('src'); this.style.visibility='hidden';"
                     />
                     <div class="absolute bottom-0 inset-x-0 bg-black/80 text-center text-[10px] font-bold text-yellow-400 py-0.5 backdrop-blur-sm">
                         ${safeWr}
                     </div>
                 </a>
             `;
-        }
-
-        function createPlaceholder(name) {
-            const rawInitial = String(name || '?').trim().charAt(0) || '?';
-            const initial = /[A-Za-z0-9\u4e00-\u9fff]/.test(rawInitial) ? rawInitial : '?';
-            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text x="50" y="55" text-anchor="middle" fill="%23666" font-size="40">${escapeHtml(initial)}</text></svg>`;
-            return 'data:image/svg+xml,' + encodeURIComponent(svg);
-        }
-
-        function handleAvatarError(imgElement) {
-            if (imgElement.dataset.errorHandled === 'true') return;
-            imgElement.dataset.errorHandled = 'true';
-            imgElement.src = createPlaceholder(imgElement.dataset.heroName || imgElement.alt || '?');
         }
 
         function formatPercent(num) {

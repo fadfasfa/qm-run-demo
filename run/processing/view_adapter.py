@@ -1,12 +1,26 @@
+"""视图适配层。
+
+负责把运行时 DataFrame 转换为前端接口和详情页需要的数据结构，
+并在这里集中处理排序、得分、tooltip 与图标投影逻辑。
+"""
+
 import pandas as pd
 import numpy as np
 import logging
 import hashlib
 import time
+import re
+import ast
+import operator
+import json
+from html import unescape
 from typing import List, Dict, Any, Optional, Tuple
 
-from hero_sync import load_champion_core_data
-from icon_resolver import build_local_augment_icon_url
+from urllib.parse import quote
+
+from scraping.augment_catalog import build_augment_catalog_lookup
+from scraping.icon_resolver import build_local_augment_icon_url, normalize_augment_name
+from scraping.version_sync import load_champion_core_data
 
 # 全局缓存。
 _hextech_cache_pool: Dict[Tuple[str, str], Dict[str, List[Dict[str, Any]]]] = {}
@@ -95,18 +109,25 @@ def _invalidate_stale_caches(df: pd.DataFrame) -> None:
         _cache_metadata.pop(key, None)
 
 
-def process_champions_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
+def process_champions_data(
+    df: pd.DataFrame,
+    *,
+    use_runtime_cache: bool = True,
+    log_columns: bool = True,
+) -> List[Dict[str, Any]]:
     # 计算全英雄榜单，按贝叶斯平滑和标准分综合排序。
     if df.empty:
         return []
 
-    logging.info(f"Processing columns: {df.columns.tolist()}")
+    if log_columns:
+        logging.info("处理英雄数据列：%s", df.columns.tolist())
 
     df_hash = _compute_df_hash(df)
-    cached_result = _get_from_cache(_champion_cache_pool, df_hash)
-    if cached_result is not None:
-        logging.debug(f"命中英雄大盘缓存，哈希={df_hash}")
-        return cached_result
+    if use_runtime_cache:
+        cached_result = _get_from_cache(_champion_cache_pool, df_hash)
+        if cached_result is not None:
+            logging.debug(f"命中英雄大盘缓存，哈希={df_hash}")
+            return cached_result
 
     # 获取英雄映射数据
     name_to_id, name_to_en = _get_champion_maps()
@@ -156,6 +177,8 @@ def process_champions_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
                 'Z_出场率': float(row['Z_出场率']) if pd.notna(row['Z_出场率']) else 0.0
             })
 
+        if use_runtime_cache:
+            _set_to_cache(_champion_cache_pool, df_hash, result, df)
         return result
 
     except Exception as e:
@@ -165,7 +188,6 @@ def process_champions_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
 
 def _clear_champion_cache():
     # 手动清空英雄大盘缓存。
-    global _champion_cache_pool, _cache_metadata
     _champion_cache_pool.clear()
     _cache_metadata.clear()
 
@@ -175,10 +197,156 @@ def _has_column_variant(df: pd.DataFrame, variants: List[str]) -> bool:
     return any(var in df.columns for var in variants)
 
 
-def process_hextechs_data(df: pd.DataFrame, name: str) -> Dict[str, List[Dict[str, Any]]]:
+_HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+_PLACEHOLDER_PATTERN = re.compile(r"@([^@]+)@")
+_SAFE_OPS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.USub: operator.neg,
+    ast.UAdd: operator.pos,
+}
+
+
+def _strip_html_text(raw_text: Any) -> str:
+    # 将 tooltip 中的 HTML 转换为纯文本，便于前端兜底展示。
+    if raw_text is None:
+        return ""
+    text = str(raw_text).strip()
+    if not text:
+        return ""
+    text = unescape(text)
+    text = _HTML_TAG_PATTERN.sub("", text)
+    text = text.replace("\u00a0", " ")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _format_number(value: float) -> str:
+    # 数值格式化：整数直接输出，浮点最多保留 3 位并去尾零。
+    if value is None:
+        return "?"
+    if abs(value - round(value)) < 1e-9:
+        return str(int(round(value)))
+    return f"{value:.3f}".rstrip("0").rstrip(".")
+
+
+def _parse_value_map(raw_values: Any) -> Dict[str, float]:
+    # 解析 CSV 中存储的海克斯数值映射。
+    if raw_values is None or (isinstance(raw_values, float) and pd.isna(raw_values)):
+        return {}
+    if isinstance(raw_values, dict):
+        payload = raw_values
+    else:
+        text = str(raw_values).strip()
+        if not text:
+            return {}
+        try:
+            payload = json.loads(text)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return {}
+    result = {}
+    if not isinstance(payload, dict):
+        return result
+    for key, value in payload.items():
+        try:
+            result[str(key)] = float(value)
+        except (TypeError, ValueError):
+            continue
+    return result
+
+
+def _eval_safe_expr(expr: str) -> Optional[float]:
+    # 对只包含基础四则运算的表达式做安全求值。
+    try:
+        node = ast.parse(expr, mode="eval").body
+    except SyntaxError:
+        return None
+
+    def _calc(n):
+        if isinstance(n, ast.BinOp):
+            left = _calc(n.left)
+            right = _calc(n.right)
+            op = _SAFE_OPS.get(type(n.op))
+            if op is None:
+                raise ValueError("unsupported operator")
+            return op(left, right)
+        if isinstance(n, ast.UnaryOp):
+            val = _calc(n.operand)
+            op = _SAFE_OPS.get(type(n.op))
+            if op is None:
+                raise ValueError("unsupported unary operator")
+            return op(val)
+        if isinstance(n, ast.Constant) and isinstance(n.value, (int, float)):
+            return float(n.value)
+        raise ValueError("unsupported expression node")
+
+    try:
+        return float(_calc(node))
+    except Exception:
+        return None
+
+
+def _resolve_placeholder_token(token: str, value_map: Dict[str, float]) -> str:
+    # 将占位符 token 解析为真实数值，解析失败时返回问号占位。
+    content = token.strip()
+    if not content:
+        return "?"
+
+    # 直接变量命中，例如 @ItemHaste@
+    if content in value_map:
+        return _format_number(value_map[content])
+
+    # 表达式变量替换，例如 @DamageAmp*100@
+    expr = content
+    for name in sorted(value_map.keys(), key=len, reverse=True):
+        expr = re.sub(rf"\b{re.escape(name)}\b", str(value_map[name]), expr)
+
+    # 仅保留数字、运算符和括号，防止任意注入。
+    if not re.fullmatch(r"[0-9eE\.\+\-\*/\(\)\s]+", expr):
+        return "?"
+
+    value = _eval_safe_expr(expr)
+    if value is None or np.isnan(value) or np.isinf(value):
+        return "?"
+    return _format_number(value)
+
+
+def _render_tooltip_plain(raw_tooltip: Any, raw_values: Any) -> str:
+    # 先去 HTML，再替换占位符为真实数值或安全占位。
+    base_text = _strip_html_text(raw_tooltip)
+    if not base_text:
+        return ""
+    value_map = _parse_value_map(raw_values)
+
+    def repl(match):
+        token = match.group(1)
+        return _resolve_placeholder_token(token, value_map)
+
+    return _PLACEHOLDER_PATTERN.sub(repl, base_text)
+
+
+def _build_catalog_icon_url(entry: Optional[Dict[str, Any]], hextech_name: str) -> str:
+    if entry:
+        filename = str(entry.get("filename", "")).strip()
+        if filename:
+            return f"/assets/{quote(filename, safe='')}"
+    return build_local_augment_icon_url(hextech_name)
+
+
+def process_hextechs_data(
+    df: pd.DataFrame,
+    name: str,
+    *,
+    catalog_lookup: Optional[Dict[str, Any]] = None,
+    use_runtime_cache: bool = True,
+    log_columns: bool = True,
+) -> Dict[str, List[Dict[str, Any]]]:
     # 计算单英雄海克斯结果，返回总榜、综合榜、纯胜率榜和分阶级榜单
     # 计算时会引入置信度衰减，避免低样本数据干扰排序
-    logging.info(f"Processing columns: {df.columns.tolist()}")
+    if log_columns:
+        logging.info("处理海克斯数据列：%s", df.columns.tolist())
 
     if df.empty:
         return {
@@ -193,23 +361,20 @@ def process_hextechs_data(df: pd.DataFrame, name: str) -> Dict[str, List[Dict[st
     # ========== 缓存检查 ==========
     df_hash = _compute_df_hash(df)
     cache_key = (name, df_hash)
-    cached_result = _get_from_cache(_hextech_cache_pool, cache_key)
-    if cached_result is not None:
-        logging.debug(f"命中海克斯缓存，英雄={name}, 哈希={df_hash}")
-        return cached_result
+    if use_runtime_cache:
+        cached_result = _get_from_cache(_hextech_cache_pool, cache_key)
+        if cached_result is not None:
+            logging.debug(f"命中海克斯缓存，英雄={name}, 哈希={df_hash}")
+            return cached_result
 
     try:
         # 创建副本避免修改原始数据
         data = df.copy()
+        effective_catalog_lookup = catalog_lookup or build_augment_catalog_lookup()
 
         # 确保必要列存在
         required_cols = ['英雄名称', '海克斯名称', '海克斯胜率', '海克斯出场率', '胜率差']
         missing_cols = [col for col in required_cols if col not in data.columns]
-
-        # 特殊兼容性处理：对不同编号字段变体进行不敏感匹配
-        # 这些列不是必填项，但如果存在任何变体就可用
-        id_variants = ['英雄ID', '英雄 ID', '英雄 id']
-        has_id_column = _has_column_variant(data, id_variants)
 
         if missing_cols:
             logging.warning(f"缺少必要列 {missing_cols}，当前列：{data.columns.tolist()}")
@@ -288,13 +453,37 @@ def process_hextechs_data(df: pd.DataFrame, name: str) -> Dict[str, List[Dict[st
 
         # ========== 辅助函数：生成海克斯卡片 ==========
         def build_hextech_card(row, include_score=True):
+            augment_name = str(row['海克斯名称'])
+            catalog_entry = effective_catalog_lookup.get(augment_name) or effective_catalog_lookup.get(normalize_augment_name(augment_name))
+            tooltip_raw = ""
+            tooltip_plain = ""
+            tier_name = str(row.get('海克斯阶级', '棱彩'))
+            icon_url = build_local_augment_icon_url(augment_name)
+
+            if catalog_entry:
+                tooltip_raw = str(catalog_entry.get("tooltip") or catalog_entry.get("description") or "").strip()
+                tooltip_plain = str(catalog_entry.get("tooltip_plain") or "").strip()
+                tier_name = str(catalog_entry.get("tier") or tier_name).strip() or tier_name
+                icon_url = _build_catalog_icon_url(catalog_entry, augment_name)
+
+            if not tooltip_raw:
+                tooltip_raw = row.get('海克斯Tooltip', '')
+                if pd.isna(tooltip_raw) or str(tooltip_raw).strip() == '':
+                    tooltip_raw = row.get('海克斯描述', '')
+                tooltip_raw = '' if pd.isna(tooltip_raw) else str(tooltip_raw)
+
+            if not tooltip_plain:
+                tooltip_plain = _render_tooltip_plain(tooltip_raw, row.get('海克斯数值', ''))
+
             card = {
-                '海克斯名称': str(row['海克斯名称']),
-                '海克斯阶级': str(row.get('海克斯阶级', '棱彩')),
+                '海克斯名称': augment_name,
+                '海克斯阶级': tier_name,
                 '海克斯胜率': float(row['海克斯胜率']) if pd.notna(row['海克斯胜率']) else 0.0,
                 '海克斯出场率': float(row['海克斯出场率']) if pd.notna(row['海克斯出场率']) else 0.0,
                 '胜率差': float(row['胜率差']) if pd.notna(row['胜率差']) else 0.0,
-                'icon': build_local_augment_icon_url(row['海克斯名称'])
+                'icon': icon_url,
+                'tooltip': tooltip_raw.strip(),
+                'tooltip_plain': tooltip_plain
             }
             if include_score:
                 card['综合得分'] = float(row['综合得分']) if pd.notna(row['综合得分']) else 0.0
@@ -354,7 +543,8 @@ def process_hextechs_data(df: pd.DataFrame, name: str) -> Dict[str, List[Dict[st
         }
 
         # ========== 缓存结果 ==========
-        _set_to_cache(_hextech_cache_pool, cache_key, result, df)
+        if use_runtime_cache:
+            _set_to_cache(_hextech_cache_pool, cache_key, result, df)
         return result
 
     except Exception as e:
@@ -371,6 +561,5 @@ def process_hextechs_data(df: pd.DataFrame, name: str) -> Dict[str, List[Dict[st
 
 def clear_hextech_cache():
     # 手动清空海克斯缓存（用于强制刷新）
-    global _hextech_cache_pool, _cache_metadata
     _hextech_cache_pool.clear()
     _cache_metadata.clear()

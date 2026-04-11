@@ -1,10 +1,17 @@
+"""终端查询交互层。
+
+负责把运行时数据组织成终端可读输出，并维护桌面端最近一次英雄选择上下文。
+"""
+
 import os
-import glob
 import json
 import sys
+import unicodedata
 import pandas as pd
-from hero_sync import BASE_DIR, CONFIG_DIR, CORE_DATA_FILE
-from alias_utils import normalize_alias_token, unique_alias_tokens
+from processing.alias_search import load_champion_alias_map, resolve_champion_name
+from processing.alias_utils import normalize_alias_token, unique_alias_tokens
+from processing.runtime_store import get_latest_csv, normalize_runtime_df
+from scraping.version_sync import CONFIG_DIR, CORE_DATA_FILE
 
 if os.name == 'nt': os.system('')  # 启用 Windows 终端颜色输出。
 RESET = "\033[0m"
@@ -16,7 +23,7 @@ CHAMP_NAME_MAP = {}
 def init_core_data():
     global CORE_DATA, CHAMP_NAME_MAP
     if CORE_DATA is None:
-        from hero_sync import load_champion_core_data
+        from scraping.version_sync import load_champion_core_data
         try:
             CORE_DATA = load_champion_core_data()
             CHAMP_NAME_MAP = {v["name"]: v["title"] for k, v in CORE_DATA.items()}
@@ -39,24 +46,14 @@ def _normalize_query_df(shared_df=None):
         latest_csv = get_latest_csv()
         if not latest_csv:
             return pd.DataFrame(), None
-        df = pd.read_csv(latest_csv)
+        df = normalize_runtime_df(pd.read_csv(latest_csv))
         source = latest_csv
     elif isinstance(shared_df, pd.DataFrame):
-        df = shared_df.copy()
+        df = normalize_runtime_df(shared_df.copy())
         source = "shared_df"
     else:
-        df = pd.DataFrame(shared_df).copy()
+        df = normalize_runtime_df(pd.DataFrame(shared_df).copy())
         source = "shared_df"
-
-    if not df.empty:
-        df.columns = df.columns.str.replace(' ', '')
-        id_col = None
-        for col in df.columns:
-            if '英雄ID' in col or 'ID' in col:
-                id_col = col
-                break
-        if id_col:
-            df[id_col] = df[id_col].astype(str).str.strip().str.replace('.0', '', regex=False)
     return df, source
 
 def get_highlight_color(row):
@@ -73,12 +70,6 @@ def get_highlight_color(row):
         if score >= 0.53: return "\033[38;5;46m"   
         if score >= 0.505: return "\033[38;5;118m" 
         return ""
-
-def get_latest_csv():
-    files = glob.glob(os.path.join(CONFIG_DIR, "Hextech_Data_*.csv"))
-    if not files: return None
-    files.sort(key=os.path.getmtime, reverse=True)
-    return files[0]
 
 def get_char_width(char):
     # 全角和宽字符按 2 计算，其余按 1 计算。
@@ -145,7 +136,7 @@ def add_new_alias(new_alias, official_names):
     confirm = input(f"请 确认要将 \"{new_alias}\" 永久添加为（{target_hero}）的外号吗？(y/n): ").strip().lower()
     if confirm == 'y':
         global CORE_DATA, CHAMP_NAME_MAP, _alias_cache
-        from hero_sync import load_champion_core_data
+        from scraping.version_sync import load_champion_core_data
 
         try:
             core_data = load_champion_core_data()
@@ -187,7 +178,7 @@ def build_default_aliases():
     print("\n警告 正在重建英雄别名索引...")
     aliases = {}
     try:
-        from hero_sync import load_champion_core_data
+        from scraping.version_sync import load_champion_core_data
         core_data = load_champion_core_data()
         for _, v in core_data.items():
             name = v.get("name")
@@ -201,6 +192,9 @@ def build_default_aliases():
             )
     except Exception as e:
         print(f"警告 核心数据提取失败: {e}")
+    for hero_name, alias_list in load_champion_alias_map().items():
+        aliases.setdefault(hero_name, [])
+        aliases[hero_name] = unique_alias_tokens(aliases[hero_name], alias_list)
 
     hardcoded = {
         "诺克萨斯之手": ["ns", "nuoshou", "诺手", "大白腿"],
@@ -356,13 +350,34 @@ def load_hero_aliases():
     global _alias_cache
     if _alias_cache is not None:
         return _alias_cache
-    _alias_cache = build_default_aliases()
+    alias_path = os.path.join(CONFIG_DIR, "Champion_Alias_Index.json")
+    alias_map = {}
+    try:
+        with open(alias_path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, list):
+            for entry in payload:
+                if not isinstance(entry, dict):
+                    continue
+                hero_name = str(entry.get("heroName", "")).strip()
+                if not hero_name:
+                    continue
+                alias_map[hero_name] = unique_alias_tokens(
+                    [hero_name, entry.get("title", ""), entry.get("enName", "")],
+                    entry.get("aliases", []) if isinstance(entry.get("aliases", []), list) else [],
+                )
+    except Exception:
+        alias_map = {}
+    _alias_cache = alias_map
     return _alias_cache
 
 
 def get_official_hero_name(user_input, official_names):
     init_core_data()
     u_in = normalize_alias_token(user_input)
+    resolved_name = resolve_champion_name(user_input)
+    if resolved_name and resolved_name in official_names:
+        return resolved_name
     hero_aliases = load_hero_aliases()
     potential = set()
     for title, aliases in hero_aliases.items():
@@ -387,11 +402,11 @@ def get_official_hero_name(user_input, official_names):
         return None
     if len(results) == 1:
         return results[0]
-    print(f"\n[?] 匹配到多个英雄:")
+    print("\n[?] 匹配到多个英雄:")
     for i, res in enumerate(results, 1):
         print(f" [{i}] {res}")
     try:
-        idx = int(input(f"请 请输入序号选择: ")) - 1
+        idx = int(input("请 请输入序号选择: ")) - 1
         return results[idx]
     except (ValueError, IndexError):
         return None
@@ -425,7 +440,6 @@ def display_hero_hextech(df, hero_name, target_tier=None, is_from_ui=False):
         print(prompt, end="", flush=True)
 
 def main_query(shared_df=None, ui_instance=None):
-    global GLOBAL_LAST_HERO
     df, source = _normalize_query_df(shared_df)
     payload = {
         "source": source,
@@ -443,5 +457,3 @@ def main_query(shared_df=None, ui_instance=None):
 
     return payload
 
-if __name__ == "__main__":
-    sys.exit(0)

@@ -1,3 +1,31 @@
+"""稳定资源同步与运行时环境引导。
+
+文件职责：
+- 初始化运行目录与 bundle 资源播种
+- 同步英雄核心资料、海克斯映射和版本号
+- 后台补齐英雄头像等稳定资源
+
+核心输入：
+- Data Dragon、Hextech、CommunityDragon 等远端资源
+- 本地 `config/`、`assets/` 和包内稳定资源
+
+核心输出：
+- `Champion_Core_Data.json`
+- `Augment_Full_Map.json`
+- `Augment_Icon_Map.json`
+- `hero_version.txt`
+
+主要依赖：
+- `processing.alias_utils`
+- `scraping.icon_resolver`
+- `tools.runtime_bundle`
+- `tools.log_utils`
+
+维护提醒：
+- 这里负责稳定资源层，不负责高频战报 CSV 与协同数据抓取
+- 新增持久化文件时，要同步评估 bundle 白名单和冷启动兼容性
+"""
+
 import requests
 import json
 import os
@@ -6,26 +34,28 @@ import time
 import threading
 import urllib3
 import logging
-import tempfile
 import shutil
-import unicodedata
 from logging.handlers import RotatingFileHandler
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from typing import Optional
 
-from alias_utils import dedupe_alias_texts
-from icon_resolver import normalize_augment_name
+from processing.alias_utils import dedupe_alias_texts
+from scraping.icon_resolver import normalize_augment_name
+from tools.log_utils import ensure_utf8_stdio, install_summary_logging
+from tools.runtime_bundle import seed_bundled_resources
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+ensure_utf8_stdio()
+
 
 def _get_script_dir() -> str:
-    return os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def bootstrap_runtime_environment() -> str:
-    # 规范运行时根目录，兼容终端、编辑器和打包程序。
+    """规范运行时根目录，兼容终端、编辑器与打包程序入口。"""
     runtime_base = os.getenv("HEXTECH_BASE_DIR", "").strip()
     if runtime_base:
         runtime_base = os.path.abspath(runtime_base)
@@ -62,9 +92,6 @@ RESOURCE_DIR = get_resource_dir()
 BASE_DIR = get_base_dir()
 CONFIG_DIR = os.path.join(BASE_DIR, "config")
 ASSET_DIR = os.path.join(BASE_DIR, "assets")
-BUNDLED_CONFIG_DIR = os.path.join(RESOURCE_DIR, "config")
-BUNDLED_ASSET_DIR = os.path.join(RESOURCE_DIR, "assets")
-
 LOG_FILE = os.path.join(CONFIG_DIR, "hextech_system.log")
 VERSION_FILE = os.path.join(CONFIG_DIR, "hero_version.txt")
 CORE_DATA_FILE = os.path.join(CONFIG_DIR, "Champion_Core_Data.json")
@@ -73,24 +100,6 @@ AUGMENT_ICON_FILE = os.path.join(CONFIG_DIR, "Augment_Icon_Map.json")
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(ASSET_DIR, exist_ok=True)
-
-
-def _seed_runtime_dir(source_dir: str, target_dir: str) -> None:
-    if not os.path.isdir(source_dir):
-        return
-
-    os.makedirs(target_dir, exist_ok=True)
-    for entry in os.listdir(source_dir):
-        src_path = os.path.join(source_dir, entry)
-        dst_path = os.path.join(target_dir, entry)
-        if os.path.exists(dst_path):
-            continue
-        if os.path.isdir(src_path):
-            shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
-        else:
-            shutil.copy2(src_path, dst_path)
-
-
 def _load_existing_champion_aliases() -> dict:
     if not os.path.exists(CORE_DATA_FILE):
         return {}
@@ -127,17 +136,20 @@ def _load_existing_champion_aliases() -> dict:
 
 
 if getattr(sys, 'frozen', False):
-    _seed_runtime_dir(BUNDLED_CONFIG_DIR, CONFIG_DIR)
-    _seed_runtime_dir(BUNDLED_ASSET_DIR, ASSET_DIR)
+    seed_bundled_resources(
+        bundle_root=RESOURCE_DIR,
+        runtime_config_dir=CONFIG_DIR,
+        runtime_asset_dir=ASSET_DIR,
+    )
 
 # 日志输出做滚动保留。
-logging.basicConfig(
+install_summary_logging(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
+    fmt='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         RotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=1, encoding='utf-8'),
         logging.StreamHandler()
-    ]
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -228,8 +240,10 @@ def _download_champion_image(session, version: str, en_name: str, asset_path: st
 _last_sync_time = 0
 SYNC_TTL = 3600
 _sync_lock = threading.Lock()
+_hero_asset_sync_thread: Optional[threading.Thread] = None
 
 def get_advanced_session():
+    """创建带重试和统一请求头的会话，供稳定资源同步链路复用。"""
     session = requests.Session()
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -249,11 +263,52 @@ def get_advanced_session():
     session.mount("http://", adapter)
     return session
 
-def sync_hero_data():
-    global _last_sync_time
 
-    cleanup_core_data = None
+def _sync_champion_assets_async(core_data: dict, version: str) -> None:
+    # 头像补齐放到后台，避免首启主路径被 172 张头像下载拖慢。
+    global _hero_asset_sync_thread
+
+    def _worker() -> None:
+        try:
+            img_session = get_advanced_session()
+            img_session.headers.update({
+                "Referer": "https://leagueoflegends.com"
+            })
+            downloaded_count = 0
+            failed_downloads = []
+            for key, v in core_data.items():
+                asset_path = os.path.join(ASSET_DIR, f"{key}.png")
+                if os.path.exists(asset_path) and os.path.getsize(asset_path) > 0:
+                    continue
+                success = _download_champion_image(img_session, version, v['en_name'], asset_path)
+                if success:
+                    downloaded_count += 1
+                else:
+                    failed_downloads.append((key, v['name'], v['en_name']))
+
+            if downloaded_count > 0 or failed_downloads:
+                logger.info(f"头像后台同步完成：下载{downloaded_count}个，失败{len(failed_downloads)}个")
+
+            logger.info("启动头像补全流程，修复缺失资源...")
+            cleanup_missing_assets(max_retries=3, core_data=core_data)
+        except Exception as e:
+            logger.warning(f"头像后台同步失败：{e}")
+
+    if _hero_asset_sync_thread is not None and _hero_asset_sync_thread.is_alive():
+        return
+
+    _hero_asset_sync_thread = threading.Thread(
+        target=_worker,
+        daemon=True,
+        name="champion-asset-sync",
+    )
+    _hero_asset_sync_thread.start()
+
+def sync_hero_data():
+    """同步英雄核心资料、海克斯映射与版本文件，并在成功后异步补头像资源。"""
+    global _last_sync_time
     sync_succeeded = False
+    current_version = ""
 
     with _sync_lock:
         now = time.time()
@@ -261,19 +316,27 @@ def sync_hero_data():
             return True
 
         session = get_advanced_session()
-        try:
-            v_url = "https://ddragon.leagueoflegends.com/api/versions.json"
-            curr_ver_raw = session.get(v_url, verify=True, timeout=10)
-            curr_ver_raw.raise_for_status()
-            curr_ver = curr_ver_raw.json()[0]
-            local_ver = ""
-            if os.path.exists(VERSION_FILE):
+        files_exist = all(
+            os.path.exists(f)
+            for f in [CORE_DATA_FILE, AUGMENT_MAP_FILE, AUGMENT_ICON_FILE]
+        )
+        local_ver = ""
+        if os.path.exists(VERSION_FILE):
+            try:
                 with open(VERSION_FILE, "r", encoding="utf-8") as f:
                     local_ver = f.read().strip()
-            files_exist = all(
-                os.path.exists(f)
-                for f in [CORE_DATA_FILE, AUGMENT_MAP_FILE, AUGMENT_ICON_FILE]
+            except OSError:
+                local_ver = ""
+        try:
+            v_url = "https://ddragon.leagueoflegends.com/api/versions.json"
+            curr_ver_raw = requests.get(
+                v_url,
+                headers=session.headers,
+                timeout=5,
             )
+            curr_ver_raw.raise_for_status()
+            curr_ver = curr_ver_raw.json()[0]
+            current_version = curr_ver
             if local_ver == curr_ver and files_exist:
                 _last_sync_time = now
                 return True
@@ -353,7 +416,7 @@ def sync_hero_data():
                             icon_path = v.get('iconSmall') or v.get('icon') or v.get('iconPath')
                             if name and icon_path:
                                     # 尝试匹配中文名称
-                                for cn_name, tier in aug_map.items():
+                                for cn_name in aug_map:
                                     # 简单匹配：比较去空格后的名称
                                     if normalize_augment_name(cn_name) == normalize_augment_name(name):
                                         aug_icon_map[cn_name] = icon_path
@@ -372,27 +435,6 @@ def sync_hero_data():
                 json.dump(core_data, f, ensure_ascii=False, indent=4)
             shutil.move(tmp_core, CORE_DATA_FILE)
 
-            # ========== 本地头像静默补全逻辑 ==========
-            # 遍历核心数据，检查并下载缺失的英雄头像
-            # 使用专用下载会话
-            img_session = get_advanced_session()
-            img_session.headers.update({
-                "Referer": "https://leagueoflegends.com"
-            })
-            downloaded_count = 0
-            failed_downloads = []  # 记录下载失败的 ID
-            for key, v in core_data.items():
-                asset_path = os.path.join(ASSET_DIR, f"{key}.png")
-                if not os.path.exists(asset_path):
-                    success = _download_champion_image(img_session, curr_ver, v['en_name'], asset_path)
-                    if success:
-                        downloaded_count += 1
-                    else:
-                        failed_downloads.append((key, v['name'], v['en_name']))
-
-            if downloaded_count > 0 or failed_downloads:
-                logger.info(f"头像同步完成：下载{downloaded_count}个，失败{len(failed_downloads)}个")
-
             if aug_map:
                 tmp_aug = AUGMENT_MAP_FILE + ".tmp"
                 with open(tmp_aug, "w", encoding="utf-8") as f:
@@ -408,25 +450,28 @@ def sync_hero_data():
                 f.write(curr_ver)
             shutil.move(tmp_ver, VERSION_FILE)
             _last_sync_time = time.time()
-            cleanup_core_data = core_data
             sync_succeeded = True
         except (requests.RequestException, json.JSONDecodeError, ValueError, KeyError) as e:
+            if files_exist:
+                logger.warning("远端版本检查失败，继续使用本地缓存：%s", e)
+                _last_sync_time = now
+                return True
             logger.error(f"🚨 同步引擎故障：{e}")
             return False
         except Exception as e:
+            if files_exist:
+                logger.warning("同步检查异常，继续使用本地缓存：%s", e)
+                _last_sync_time = now
+                return True
             logger.exception(f"🚨 同步引擎发生未预期致命故障：{e}")
             return False
 
-    if sync_succeeded and cleanup_core_data:
-        # 在释放同步锁后再补资源，避免 cleanup_missing_assets 触发重入锁。
-        logger.info("启动头像补全流程，修复缺失资源...")
-        cleanup_missing_assets(max_retries=3, core_data=cleanup_core_data)
-        return True
-
+    if sync_succeeded:
+        _sync_champion_assets_async(core_data, current_version)
     return sync_succeeded
 
-# （高优先级修复）加载函数增加文件存在性检查，文件丢失时强制重新同步
 def load_champion_core_data():
+    """读取英雄核心资料；文件缺失时强制触发一次稳定资源同步。"""
     global _last_sync_time
     if not os.path.exists(CORE_DATA_FILE):
         with _sync_lock:
@@ -437,6 +482,7 @@ def load_champion_core_data():
         return json.load(f)
 
 def load_augment_map():
+    """读取海克斯等级映射；文件缺失时强制触发一次稳定资源同步。"""
     global _last_sync_time
     if not os.path.exists(AUGMENT_MAP_FILE):
         with _sync_lock:
@@ -461,13 +507,7 @@ def _collect_missing_assets(core_data: dict) -> list:
 
 
 def cleanup_missing_assets(max_retries: int = 3, core_data: Optional[dict] = None) -> list:
-    # 清理并重新下载缺失的英雄头像资源。
-    #
-    # 参数：
-    # max_retries：单个资源最大重试次数
-    #
-    # 返回：
-    # 仍然缺失的资源列表 [(key, name, en_name), ...]
+    """扫描并补齐缺失的英雄头像资源，返回仍失败的资源清单。"""
     if core_data is None:
         core_data = load_champion_core_data()
     if not core_data:
@@ -492,9 +532,10 @@ def cleanup_missing_assets(max_retries: int = 3, core_data: Optional[dict] = Non
         logger.info("没有缺失的资源文件")
         return []
 
-    logger.info(f"发现 {len(missing_assets)} 个缺失的资源，开始重试下载...")
+    logger.info("头像资源补全开始：missing=%s", len(missing_assets))
 
     still_missing = []
+    recovered_count = 0
     for key, name, en_name in missing_assets:
         asset_path = os.path.join(ASSET_DIR, f"{key}.png")
         success = False
@@ -502,17 +543,19 @@ def cleanup_missing_assets(max_retries: int = 3, core_data: Optional[dict] = Non
         # 多次重试
         for attempt in range(max_retries):
             if _download_champion_image(img_session, version, en_name, asset_path):
-                logger.info(f"  [重试成功] {name} ({key})")
                 success = True
+                recovered_count += 1
                 break
-            logger.debug(f"  [重试中] {name} ({key}) - 第 {attempt + 1}/{max_retries} 次")
 
         if not success:
             still_missing.append((key, name, en_name))
-            logger.warning(f"  [重试失败] {name} ({key}) - 仍缺失")
-
-    # 输出表格
-    _print_missing_assets_table(still_missing)
+    logger.info(
+        "头像资源补全完成：success=%s failed=%s",
+        recovered_count,
+        len(still_missing),
+    )
+    if still_missing:
+        logger.warning("头像资源补全失败：failed=%s", len(still_missing))
 
     return still_missing
 
@@ -523,41 +566,8 @@ def _print_missing_assets_table(missing_list: list):
     # 参数：
     # missing_list：缺失资源列表 [(key, name, en_name), ...]
     if not missing_list:
-        logger.info("=" * 50)
-        logger.info("所有资源文件已完整下载！")
-        logger.info("=" * 50)
+        logger.info("头像资源完整：success")
         return
-
-    # 计算列宽
-    key_width = max(len(str(item[0])) for item in missing_list)
-    name_width = max(len(item[1]) for item in missing_list)
-    en_width = max(len(item[2]) for item in missing_list)
-
-    # 限制列宽，避免内容过长
-    key_width = min(key_width, 10)
-    name_width = min(name_width, 20)
-    en_width = min(en_width, 20)
-
-    total_width = key_width + name_width + en_width + 8
-
-    logger.info("=" * total_width)
-    logger.info("缺失资源列表")
-    logger.info("=" * total_width)
-    header = f"{'ID':<{key_width}}  {'中文名':<{name_width}}  {'英文名':<{en_width}}"
-    logger.info(header)
-    logger.info("-" * total_width)
-
-    for key, name, en_name in sorted(missing_list, key=lambda x: int(x[0])):
-        # 截断过长的名称
-        name_display = name[:name_width-2] + ".." if len(name) > name_width else name
-        en_display = en_name[:en_width-2] + ".." if len(en_name) > en_width else en_name
-        logger.info(f"{key:<{key_width}}  {name_display:<{name_width}}  {en_display:<{en_width}}")
-
-    logger.info("=" * total_width)
-    logger.info(f"共缺失 {len(missing_list)} 个资源文件")
-    logger.info("=" * total_width)
+    logger.warning("头像资源缺失：failed=%s", len(missing_list))
 
 
-if __name__ == "__main__":
-    sync_hero_data()
-    cleanup_missing_assets()

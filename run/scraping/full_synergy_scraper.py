@@ -1,10 +1,10 @@
-# 海克斯信息爬虫。
-# 使用请求库和解析库抓取页面，再用线程池并发处理。
+"""海克斯联动数据抓取器。"""
 
 import logging
 import json
 import os
 import random
+import sys
 import time
 import tempfile
 import requests
@@ -14,8 +14,22 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urljoin, urlparse, urlunparse
+from tools.log_utils import install_summary_logging, log_task_summary
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def _get_script_dir() -> str:
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _bootstrap_runtime_base_dir() -> str:
+    runtime_base = os.getenv("HEXTECH_BASE_DIR", "").strip()
+    if runtime_base:
+        return os.path.abspath(runtime_base)
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return _get_script_dir()
+
+
+BASE_DIR = _bootstrap_runtime_base_dir()
 CONFIG_DIR = os.path.join(BASE_DIR, "config")
 CONFIG_PATH = Path(CONFIG_DIR)
 ALLOWED_CONFIG_FILES = {
@@ -33,10 +47,9 @@ OUTPUT_LOCK_TIMEOUT_SECONDS = 30
 OUTPUT_LOCK_POLL_INTERVAL_SECONDS = 0.2
 
 # 日志配置。
-logging.basicConfig(
+install_summary_logging(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    encoding='utf-8'
+    fmt='%(asctime)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
 
@@ -292,7 +305,6 @@ class ApexSpider:
     def crawl_champion_list(self) -> dict:
         # 爬取英雄列表并返回名称和详情页地址。
         url = f"{self.base_url}/champions"
-        logger.info(f"开始爬取英雄列表：{self._sanitize_log_url(url)}")
 
         result = {
             "success": False,
@@ -310,7 +322,6 @@ class ApexSpider:
             soup = BeautifulSoup(html, 'html.parser')
 
             champ_cards = soup.select('.champ-card')
-            logger.info(f"找到 {len(champ_cards)} 个英雄卡片")
 
             champions = []
             for card in champ_cards:
@@ -326,13 +337,11 @@ class ApexSpider:
                         full_url = self._build_allowed_detail_url(href)
                         if full_url:
                             champions.append({"name": name, "url": full_url})
-                            logger.info(f"提取英雄：{name} -> {self._sanitize_log_url(full_url)}")
                 except Exception as e:
                     logger.warning(f"单个英雄卡片提取失败：{_safe_exception_label(e)}")
                     continue
 
             if champions:
-                logger.info(f"成功提取 {len(champions)} 个英雄（含 URL）")
                 result["champions"] = champions
                 result["success"] = True
             else:
@@ -349,7 +358,6 @@ class ApexSpider:
 
     def extract_hextech_synergies(self, detail_url: str) -> list:
         # 提取英雄详情页中的海克斯协同方案。
-        logger.info(f"开始提取海克斯协同方案：{self._sanitize_log_url(detail_url)}")
         result = []
 
         try:
@@ -361,7 +369,6 @@ class ApexSpider:
             soup = BeautifulSoup(html, 'html.parser')
 
             cards = soup.select('.interaction-card')
-            logger.info(f"找到 {len(cards)} 个交互卡片")
 
             for card in cards:
                 try:
@@ -380,12 +387,10 @@ class ApexSpider:
                         text = card.get_text(separator=' | ', strip=True)
                         if text:
                             result.append(text)
-                            logger.info(f"提取到协同方案：{text[:50]}...")
                 except Exception as e:
                     logger.warning(f"单个卡片提取失败：{_safe_exception_label(e)}")
                     continue
 
-            logger.info(f"成功提取 {len(result)} 个海克斯协同方案")
             return result
 
         except Exception as e:
@@ -398,42 +403,48 @@ class ApexSpider:
 
 def main():
     # 主函数入口
-    logger.info("=" * 50)
-    logger.info("ApexLoL 超频并发爬虫启动")
-    logger.info("=" * 50)
+    started_at = time.time()
+    logger.info("ApexLoL 协同抓取开始")
 
     # 创建爬虫实例
     spider = ApexSpider()
 
     # 爬取英雄列表
-    logger.info("-" * 30)
-    logger.info("（任务 1）爬取英雄列表")
     champion_result = spider.crawl_champion_list()
 
     if champion_result["success"]:
-        logger.info(f"英雄列表爬取成功，共 {len(champion_result['champions'])} 条数据")
-        for champ in champion_result["champions"][:3]:
-            logger.info(
-                f"  - {champ['name']} -> {_sanitize_url_for_log(champ['url'])}"
-            )
+        logger.info("英雄列表抓取成功：count=%s", len(champion_result["champions"]))
     else:
-        logger.error(f"英雄列表爬取失败：{champion_result.get('error')}")
+        log_task_summary(
+            logger,
+            task="ApexLoL 协同抓取",
+            started_at=started_at,
+            success=False,
+            detail=f"stage=champion_list error={champion_result.get('error')}",
+        )
         return
-
-    logger.info("=" * 50)
 
     # 加载本地配置文件
-    logger.info("-" * 30)
-    logger.info("（任务 2）加载本地英雄配置")
-
     try:
         core_data = _load_json_file("Champion_Core_Data.json", "core_data")
-        logger.info(f"核心数据加载成功：{len(core_data)} 个英雄")
+        logger.info("核心数据加载成功：count=%s", len(core_data))
     except (FileNotFoundError, PermissionError, ValueError, json.JSONDecodeError) as e:
-        logger.error(f"核心数据加载失败：{_safe_exception_label(e)}")
+        log_task_summary(
+            logger,
+            task="ApexLoL 协同抓取",
+            started_at=started_at,
+            success=False,
+            detail=f"stage=core_data error={_safe_exception_label(e)}",
+        )
         return
     except Exception as e:
-        logger.error(f"核心数据加载失败：{_safe_exception_label(e)}")
+        log_task_summary(
+            logger,
+            task="ApexLoL 协同抓取",
+            started_at=started_at,
+            success=False,
+            detail=f"stage=core_data error={_safe_exception_label(e)}",
+        )
         return
 
     # 构建输出用的完整数据字典，包含核心字段和别名列表
@@ -466,21 +477,13 @@ def main():
                 if normalized:
                     search_index[normalized] = champ_id
 
-    logger.info(f"构建核心数据字典：{len(core_info_dict)} 个英雄")
-    logger.info(f"构建搜索索引：{len(search_index)} 个关键词")
-
     # 全量遍历英雄列表并提取海克斯协同方案，使用线程池并发执行
-    logger.info("-" * 30)
-    logger.info(f"（任务 3）全量提取海克斯协同方案（{THREAD_POOL_WORKERS} 线程并发）")
-
     # 初始化最终数据字典
     final_data = {}
 
     # 获取英雄列表（全量，移除之前的[:3]限制）
     champions = champion_result.get("champions", [])
     if champions:
-        logger.info(f"开始遍历 {len(champions)} 个英雄的海克斯协同方案（并发处理）...")
-
         # 构建任务字典：地址对应英雄信息
         task_map = {}
         skipped_names = []
@@ -509,12 +512,7 @@ def main():
 
         # 调试信息
         if skipped_names:
-            logger.warning(f"未匹配的英雄名称数: {len(skipped_names)}")
-            if len(skipped_names) <= 10:
-                for name in skipped_names[:5]:
-                    logger.warning(f"  示例: {repr(name)}")
-
-        logger.info(f"成功匹配 {len(task_map)} 个英雄用于并发抓取")
+            logger.warning("协同抓取存在未匹配英雄：count=%s", len(skipped_names))
 
         # 使用线程池进行并发抓取（将工作线程数从 16 调整为 8）
         executor = ThreadPoolExecutor(max_workers=THREAD_POOL_WORKERS)
@@ -545,8 +543,6 @@ def main():
                             "synergies": synergies
                         }
 
-                        logger.info(f"[{champ_name}] 提取完成，共 {len(synergies)} 个协同方案")
-
                     except Exception as e:
                         logger.error(
                             f"并发任务异常 - URL: {_sanitize_url_for_log(champ_url)}, "
@@ -569,15 +565,21 @@ def main():
         lock_path = output_path.with_suffix(output_path.suffix + ".lock")
         with _output_file_lock(lock_path):
             _atomic_write_json(output_path, final_data)
-
-        logger.info(f"数据已保存到：{output_path}")
-        logger.info(f"Total heroes captured: {len(final_data)}")
+        log_task_summary(
+            logger,
+            task="ApexLoL 协同抓取",
+            started_at=started_at,
+            success=True,
+            detail=f"heroes={len(final_data)} output={output_path.name}",
+        )
     else:
-        logger.error("英雄列表为空，无法提取协同方案")
-
-    logger.info("=" * 50)
-    logger.info("爬虫执行完成")
-    logger.info("=" * 50)
+        log_task_summary(
+            logger,
+            task="ApexLoL 协同抓取",
+            started_at=started_at,
+            success=False,
+            detail="stage=champion_list error=empty_result",
+        )
 
     return {
         "champions": champion_result,
@@ -585,5 +587,3 @@ def main():
     }
 
 
-if __name__ == "__main__":
-    main()

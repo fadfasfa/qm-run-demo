@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hextech 极地枢纽 - 英雄海克斯矩阵</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="canvas_fallback.js"></script>
     <style>
         body {
             background-color: #11111b;
@@ -250,6 +249,35 @@
         .anim-auto-lock {
             animation: autoLockFlash 0.8s ease-out forwards;
         }
+
+        /* 海克斯 Hover 悬浮窗 */
+        .hextech-tooltip {
+            position: fixed;
+            pointer-events: none;
+            z-index: 99999;
+            opacity: 0;
+            transition: opacity 0.15s ease-in-out;
+            background: rgba(15, 15, 20, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            width: max-content;
+            max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+            color: #cdd6f4;
+            font-size: 13px;
+            line-height: normal;
+        }
+        .hextech-tooltip.show { opacity: 1; }
+        .hextech-tooltip-header {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+            padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .hextech-tooltip-title { font-weight: 700; font-size: 15px; }
+        .hextech-tooltip-tier-Prismatic { color: #22d3ee; }
+        .hextech-tooltip-tier-Gold { color: #f4bf24; }
+        .hextech-tooltip-tier-Silver { color: #94a3b8; }
     </style>
 </head>
 
@@ -270,20 +298,7 @@
             id="mainHeader">
             <div id="headerBg" class="absolute right-0 top-0 bottom-0 w-1/2 opacity-20 bg-cover bg-left"></div>
             <img id="heroAvatar" src=""
-                class="w-20 h-20 rounded-xl border-2 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)] relative z-10 bg-gray-900 object-cover"
-                onerror="(() => {
-                     let stage = this.dataset.fallbackStage || '0';
-                     if (stage === '0') {
-                         this.src = 'https://ddragon.leagueoflegends.com/cdn/' + (window.ddVersion || '14.3.1') + '/img/champion/' + (window.enName || '').replace(/[^\w]/g, '') + '.png';
-                         this.dataset.fallbackStage = '1';
-                     } else if (stage === '1') {
-                         if (window.handleAssetMissing) {
-                             window.handleAssetMissing(this, window.heroName || '?', 'avatar', '');
-                         }
-                          this.dataset.fallbackStage = '2';
-                          this.onerror = null;
-                     }
-                 }).call(this)">
+                class="w-20 h-20 rounded-xl border-2 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)] relative z-10 bg-gray-900 object-cover">
 
             <div class="relative z-10">
                 <div class="flex items-center space-x-3 mb-1">
@@ -325,7 +340,7 @@
                 <div
                     class="inline-block w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin">
                 </div>
-                <div class="text-gray-400 mt-4 font-bold tracking-widest">提纯海克斯数据中...</div>
+                <div class="text-gray-400 mt-4 font-bold tracking-widest">加载海克斯数据中...</div>
             </div>
 
             <div id="noDataTip" class="hidden text-center py-20">
@@ -402,7 +417,7 @@
             document.getElementById('heroAvatar').src = `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/img/champion/${enName}.png`;
         } else {
             document.getElementById('headerBg').style.backgroundColor = '#181825';
-            document.getElementById('heroAvatar').src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2240%22>?</text></svg>';
+            document.getElementById('heroAvatar').removeAttribute('src');
         }
 
         if (enName) {
@@ -474,10 +489,30 @@
                          alt="${safeHextechName}"
                          decoding="async"
                          data-hextech-name="${safeHextechName}"
-                         data-hextech-tier="${safeTier}"
-                         onerror="if (window.handleAssetMissing) { window.handleAssetMissing(this, this.dataset.hextechName || this.alt || '?', 'generic', this.dataset.hextechTier || ''); } else { this.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;><rect fill=&quot;%23333&quot; width=&quot;100&quot; height=&quot;100&quot;/><text x=&quot;50&quot; y=&quot;55&quot; text-anchor=&quot;middle&quot; fill=&quot;%23666&quot; font-size=&quot;34&quot; font-family=&quot;Arial&quot;>' + ((this.dataset.hextechName || this.alt || '?').charAt(0)) + '</text></svg>'); }">
+                         data-hextech-tier="${safeTier}">
                 </div>
             `;
+        }
+
+        function purifyHextechTooltip(text) {
+            if (!text) return '';
+            let s = String(text);
+            s = s.replace(/\{\{\s*Item_Keyword_OnHit\s*\}\}/gi, '攻击特效');
+            s = s.replace(/\{\{.*?\}\}/g, '');
+            s = s.replace(/<\/?lol-uikit[^>]*>/gi, '');
+            s = s.replace(/%i:[a-zA-Z0-9_]+%/gi, '');
+            
+            // 剥离动态追踪面板（包括已造成的伤害等变体）
+            s = s.replace(/<br>\s*(已获得的额外属性|已造成的伤害|已造成的额外伤害|已提供的护盾|伤害|治疗)[：:][\s\S]*/g, '');
+            s = s.replace(/\s*(已获得的额外属性|已造成的伤害|已造成的额外伤害|已提供的护盾|伤害|治疗)[：:][\s\S]*/g, '');
+            
+            // 压缩和清理连续的问号及多段问号噪声
+            s = s.replace(/\?{2,}/g, '');
+            s = s.replace(/(?:\s*\?\s*){2,}/g, '');
+            s = s.replace(/^[?\s]+|[?\s]+$/g, '');
+            
+            s = s.replace(/\n\s*\n/g, '\n');
+            return s.trim();
         }
 
         function createHextechCard(hextech, index) {
@@ -486,9 +521,16 @@
 
             const wr = (hextech.海克斯胜率 * 100).toFixed(1);
             const pr = (hextech.海克斯出场率 * 100).toFixed(1);
+            
+            const hexInfo = {
+                name: hextech.海克斯名称,
+                tier: hextech.海克斯阶级,
+                desc: purifyHextechTooltip(hextech.tooltip_plain)
+            };
+            const bindData = encodeURIComponent(JSON.stringify(hexInfo));
 
                 return `
-            <div class="list-row flex items-center p-2 rounded border border-gray-700 bg-[#1e1e2e] hover:bg-[#252535] transition-colors gap-2">
+            <div class="list-row flex items-center p-2 rounded border border-gray-700 bg-[#1e1e2e] hover:bg-[#252535] transition-colors gap-2" data-hex-info="${bindData}">
                 <div class="w-6 text-center text-xs font-bold text-gray-500">${index + 1}</div>
 
                 <div class="flex items-center gap-2 flex-shrink-0">
@@ -643,10 +685,11 @@
                         author: author,
                         isOriginal: isOriginal,
                         content: content,
-                        fallbackScore: fallbackScore
+                        fallbackScore: fallbackScore,
+                        baseHex: baseHex
                     };
                 }
-                return { original: str, name: "未知联动", gradeScore: -1, fallbackScore: 0, content: str };
+                return { original: str, name: "未知联动", gradeScore: -1, fallbackScore: 0, content: str, baseHex: null };
             });
 
             parsedArticles.sort((a, b) => {
@@ -678,8 +721,8 @@
                     badgeText = 'text-[#ffffff]';
                 }
 
-                const iconUrl = window.augmentIconMap && window.augmentIconMap[item.name]
-                    ? window.augmentIconMap[item.name]
+                const iconUrl = (item.baseHex && item.baseHex.icon)
+                    ? toLocalAugmentIconUrl(item.baseHex.icon, item.name)
                     : `./assets/${encodeURIComponent(item.name)}.png`;
                 const safeName = escapeHtml(item.name);
                 const safeTier = escapeHtml(item.tier);
@@ -693,11 +736,24 @@
                     return 'border border-gray-500/40 text-gray-400 bg-gray-500/10';
                 };
 
+                const hexInfo = item.baseHex ? {
+                    name: item.baseHex.海克斯名称,
+                    tier: item.baseHex.海克斯阶级,
+                    desc: purifyHextechTooltip(item.baseHex.tooltip_plain)
+                } : {
+                    name: item.name,
+                    tier: item.tier,
+                    desc: '无详细描述'
+                };
+                const bindData = encodeURIComponent(JSON.stringify(hexInfo));
+
                 return `
 <div class="hextech-card p-[1px] bg-[#151d2a] mb-4" style="clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));">
     <div class="bg-[#060b10] p-5 flex gap-4" style="clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px)); min-height: 110px;">
         
-        ${renderAugmentIcon(iconUrl, item.name, item.tier, 'detail')}
+        <div class="cursor-pointer" data-hex-info="${bindData}">
+            ${renderAugmentIcon(iconUrl, item.name, item.tier, 'detail')}
+        </div>
 
         <div class="flex flex-col flex-grow">
             <div class="flex items-start justify-between w-full">
@@ -768,27 +824,32 @@
             }, { passive: false });
         }
 
+        async function loadSynergies() {
+            try {
+                const synergyRes = await fetch(`${API_BASE}/api/synergies/${encodeURIComponent(heroId || hero)}`);
+                const synergyResult = await synergyRes.json();
+                synergyData = synergyResult.synergies || [];
+                updateFilteredSynergies(currentView);
+            } catch (err) {
+                console.error(err);
+                synergyData = [];
+                updateFilteredSynergies(currentView);
+            }
+        }
+
         async function loadHextechs() {
             if (!hero) {
                 document.getElementById('loadingSpinner').innerHTML = '<div class="text-red-400">错误：未获取到英雄名称</div>';
                 return;
             }
             try {
-                const [hextechRes, synergyRes, iconMapRes] = await Promise.all([
-                    fetch(`${API_BASE}/api/champion/${encodeURIComponent(hero)}/hextechs`),
-                    fetch(`${API_BASE}/api/synergies/${encodeURIComponent(heroId || hero)}`),
-                    fetch(`${API_BASE}/api/augment_icon_map`)
-                ]);
-
+                const hextechRes = await fetch(`${API_BASE}/api/champion/${encodeURIComponent(hero)}/hextechs`);
                 hextechData = await hextechRes.json();
-                const synergyResult = await synergyRes.json();
-                synergyData = synergyResult.synergies || [];
-                window.augmentIconMap = await iconMapRes.json();
-
                 activeArray = hextechData.comprehensive || [];
 
                 document.getElementById('loadingSpinner').classList.add('hidden');
                 renderCurrentView();
+                loadSynergies();
             } catch (err) {
                 console.error(err);
                 document.getElementById('loadingSpinner').classList.add('hidden');
@@ -826,6 +887,86 @@
             connectWS();
         };
 
+        window.addEventListener('DOMContentLoaded', () => {
+            const tooltipEl = document.createElement('div');
+            tooltipEl.className = 'hextech-tooltip';
+            tooltipEl.innerHTML = `
+                <div class="hextech-tooltip-header">
+                    <span class="hextech-tooltip-title" id="tt-title"></span>
+                </div>
+                <div class="hextech-tooltip-body text-gray-300 whitespace-pre-wrap text-[13px]" id="tt-body"></div>
+            `;
+            document.body.appendChild(tooltipEl);
+            const ttTitle = tooltipEl.querySelector('#tt-title');
+            const ttBody = tooltipEl.querySelector('#tt-body');
+
+            function safelyRenderTooltipDesc(desc, containerEl) {
+                containerEl.textContent = '';
+                if (!desc) {
+                    const fallbackSpan = document.createElement('span');
+                    fallbackSpan.className = 'text-gray-500 text-xs';
+                    fallbackSpan.textContent = '暂无详细描述';
+                    containerEl.appendChild(fallbackSpan);
+                    return;
+                }
+                containerEl.textContent = String(desc);
+            }
+
+            const containers = [
+                document.getElementById('compList'),
+                document.getElementById('synergyArticleScroll')
+            ].filter(Boolean);
+
+            containers.forEach(container => {
+                container.addEventListener('mouseover', (e) => {
+                    const target = e.target.closest('[data-hex-info]');
+                    if (!target || !container.contains(target)) return;
+
+                    const dataStr = target.getAttribute('data-hex-info');
+                    if (!dataStr) return;
+
+                    try {
+                        const info = JSON.parse(decodeURIComponent(dataStr));
+                        ttTitle.textContent = info.name || '';
+                        ttTitle.className = 'hextech-tooltip-title';
+                        const tier = info.tier || '';
+
+                        if (tier.includes('棱彩') || tier === 'Prismatic' || tier.includes('彩色')) {
+                            ttTitle.classList.add('hextech-tooltip-tier-Prismatic');
+                        } else if (tier.includes('金') || tier === 'Gold' || tier.includes('黄金')) {
+                            ttTitle.classList.add('hextech-tooltip-tier-Gold');
+                        } else {
+                            ttTitle.classList.add('hextech-tooltip-tier-Silver');
+                        }
+
+                        safelyRenderTooltipDesc(info.desc, ttBody);
+                        tooltipEl.classList.add('show');
+                    } catch (err) {
+                        console.error('Hextech tooltip JSON parse error:', err);
+                    }
+                });
+
+                container.addEventListener('mousemove', (e) => {
+                    if (!tooltipEl.classList.contains('show')) return;
+                    const offset = 15;
+                    let x = e.clientX + offset;
+                    let y = e.clientY + offset;
+                    const rect = tooltipEl.getBoundingClientRect();
+                    if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - 10;
+                    if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 10;
+                    tooltipEl.style.left = x + 'px';
+                    tooltipEl.style.top = y + 'px';
+                });
+
+                container.addEventListener('mouseout', (e) => {
+                    const target = e.target.closest('[data-hex-info]');
+                    if (!target) return;
+                    const related = e.relatedTarget;
+                    if (related && target.contains(related)) return;
+                    tooltipEl.classList.remove('show');
+                });
+            });
+        });
 
         function escapeHtml(text) {
             const map = {

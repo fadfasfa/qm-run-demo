@@ -1,3 +1,5 @@
+"""英雄海克斯排名抓取器。"""
+
 import requests
 import json
 import time
@@ -12,7 +14,13 @@ import threading
 import random
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from hero_sync import get_advanced_session, CONFIG_DIR, load_augment_map, load_champion_core_data
+from scraping.version_sync import (
+    CONFIG_DIR,
+    get_advanced_session,
+    load_augment_map,
+    load_champion_core_data,
+)
+from tools.log_utils import log_task_summary
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 FRESHNESS_THRESHOLD = 0.0005
@@ -31,9 +39,84 @@ def get_random_ua():
     return random.choice(USER_AGENT_POOL)
 
 
+def _clean_augment_text(value) -> str:
+    # 统一清洗文本字段，避免空白干扰后续拼接。
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return text
+
+
+def _extract_augment_meta(raw_item: dict) -> dict:
+    # 提取增强符文描述信息；tooltip 缺失时回退 description。
+    description = _clean_augment_text(
+        raw_item.get("description")
+        or raw_item.get("desc")
+    )
+    tooltip = _clean_augment_text(
+        raw_item.get("tooltip")
+        or raw_item.get("toolTip")
+        or raw_item.get("tips")
+    )
+    if not tooltip:
+        tooltip = description
+    spell_values = _extract_spell_values(raw_item)
+    return {
+        "description": description,
+        "tooltip": tooltip,
+        "spell_values": spell_values,
+    }
+
+
+def _extract_spell_values(raw_item: dict) -> dict:
+    # 提取增强符文中的可替换数值，用于后续 tooltip_plain 占位符解析。
+    values = {}
+
+    def append_value(name, value):
+        key = _clean_augment_text(name)
+        if not key:
+            return
+        try:
+            values[key] = float(value)
+        except (TypeError, ValueError):
+            return
+
+    def consume_mapping(mapping):
+        if not isinstance(mapping, dict):
+            return
+        for key, val in mapping.items():
+            if isinstance(val, (int, float)):
+                append_value(key, val)
+            elif isinstance(val, list):
+                # 兼容 [100, 120, ...] 这种多等级数组，取首个有效数值。
+                for item in val:
+                    if isinstance(item, (int, float)):
+                        append_value(key, item)
+                        break
+
+    consume_mapping(raw_item.get("spellDataValues"))
+    consume_mapping(raw_item.get("DataValues"))
+    consume_mapping(raw_item.get("dataValues"))
+    consume_mapping(raw_item.get("mDataValues"))
+
+    effects = raw_item.get("mEffects")
+    if isinstance(effects, dict):
+        consume_mapping(effects)
+    elif isinstance(effects, list):
+        for entry in effects:
+            if isinstance(entry, dict):
+                name = entry.get("name") or entry.get("key") or entry.get("id")
+                val = entry.get("value") or entry.get("values") or entry.get("amount")
+                if isinstance(val, list):
+                    val = next((x for x in val if isinstance(x, (int, float))), None)
+                if isinstance(val, (int, float)):
+                    append_value(name, val)
+
+    return values
+
+
 def fetch_with_retry(session, url, max_retries=3, timeout=10):
     # 指数退避重试。
-    last_exception = None
     for attempt in range(max_retries):
         try:
             headers = {"User-Agent": get_random_ua()}
@@ -41,7 +124,6 @@ def fetch_with_retry(session, url, max_retries=3, timeout=10):
             response.raise_for_status()
             return response
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
-            last_exception = e
             if attempt < max_retries - 1:
                 wait_time = 2 ** (attempt + 1)
                 logging.warning(f"请求 {url} 失败 (尝试 {attempt + 1}/{max_retries}): {e}，{wait_time}秒后重试...")
@@ -56,18 +138,18 @@ def check_execution_permission():
     if not os.path.exists(status_file):
         return True, "首次运行，启动抓取..."
     try:
-        with open(status_file, "r") as f:
+        with open(status_file, "r", encoding="utf-8") as f:
             last_run = json.load(f).get("last_success_time", 0)
             if datetime.fromtimestamp(now).date() > datetime.fromtimestamp(last_run).date():
                 return True, "跨天自动同步..."
             if (now - last_run) / 3600 >= 4:
                 return True, "数据过时，执行同步..."
             return False, "数据尚在有效期内，跳过抓取。"
-    except Exception:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
         return True, "状态文件异常，强制刷新..."
 
 def update_status_file():
-    with open(os.path.join(CONFIG_DIR, "scraper_status.json"), "w") as f:
+    with open(os.path.join(CONFIG_DIR, "scraper_status.json"), "w", encoding="utf-8") as f:
         json.dump({"last_success_time": time.time()}, f)
 
 def cleanup_old_csvs():
@@ -90,7 +172,16 @@ def cleanup_old_csvs():
                 logging.info(f"已清理过期/残留文件：{os.path.basename(f)}")
         except Exception as e:
             logging.error(f"清理文件异常 {f}: {e}")
-def extract_champion_stats(html: str, aug_id_map: dict, truth_dict: dict, champ_id: str, champ_name: str, champ_data: dict) -> list:
+
+
+def extract_champion_stats(
+    html: str,
+    aug_id_map: dict,
+    truth_dict: dict,
+    champ_id: str,
+    champ_name: str,
+    champ_data: dict,
+) -> list:
     # 扫描页面并用内存字典完成匹配。
     rows = []
 
@@ -143,15 +234,16 @@ def extract_champion_stats(html: str, aug_id_map: dict, truth_dict: dict, champ_
     return rows
 
 def main_scraper(stop_event=None):
+    started_at = time.time()
     current_date = datetime.now().strftime('%Y-%m-%d')
     output_csv = os.path.join(CONFIG_DIR, f"Hextech_Data_{current_date}.csv")
 
     can_run, msg = check_execution_permission()
     if not can_run:
-        logging.info(f"数据尚在有效期内，跳过抓取：{msg}")
+        logging.info("海克斯抓取跳过：%s", msg)
         return False
 
-    logging.info(f"启动抓取任务：{msg}")
+    logging.info("海克斯抓取开始：%s", msg)
     truth_dict = load_augment_map()
     core_data = load_champion_core_data()
     if not truth_dict or not core_data:
@@ -167,17 +259,18 @@ def main_scraper(stop_event=None):
             return False
         aug_data = aug_response.json()
 
-        aug_id_map = {
-            str(k): v.get('displayName', '').strip()
-            for k, v in aug_data.items()
-        }
+        aug_id_map = {}
+        for raw_key, raw_item in aug_data.items():
+            item = raw_item if isinstance(raw_item, dict) else {}
+            aug_id = str(raw_key)
+            aug_id_map[aug_id] = _clean_augment_text(item.get('displayName'))
 
         stats_response = fetch_with_retry(session, "https://hextech.dtodo.cn/data/champions-stats.json")
         if stats_response is None:
             logging.error("获取英雄统计数据失败")
             return False
         stats_list = stats_response.json()
-    except Exception as e:
+    except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
         logging.error(f"抓取端握手异常：{e}")
         return False
 
@@ -196,15 +289,22 @@ def main_scraper(stop_event=None):
 
             if res is not None and res.status_code == 200 and len(res.text) > 0:
                 try:
-                    champ_rows = extract_champion_stats(res.text, aug_id_map, truth_dict, c_id, c_name, champ)
+                    champ_rows = extract_champion_stats(
+                        res.text,
+                        aug_id_map,
+                        truth_dict,
+                        c_id,
+                        c_name,
+                        champ
+                    )
                 except ValueError as e:
                     logging.warning(f"[{c_name}] aug 解析失败：{e} | URL={url} | 响应长度={len(res.text)}")
-        except Exception as e:
+        except requests.RequestException as e:
             logging.error(f"[{c_name}] HTTP 获取失败：{e} | URL={url} | 堆栈={traceback.format_exc().strip()}")
 
         return c_name, champ_rows
 
-    logging.info(f"启动 16 线程超频抓取池，共 {len(stats_list)} 名英雄...")
+    logging.info("海克斯抓取执行中：heroes=%s workers=%s", len(stats_list), 16)
     with ThreadPoolExecutor(max_workers=16) as executor:
         futures = [executor.submit(fetch_champ, c) for c in stats_list]
         for f in as_completed(futures):
@@ -261,11 +361,21 @@ def main_scraper(stop_event=None):
 
         update_status_file()
         cleanup_old_csvs()
-        logging.info(f"抓取结束，固化至：{output_csv}")
+        log_task_summary(
+            logging.getLogger(__name__),
+            task="海克斯抓取",
+            started_at=started_at,
+            success=True,
+            detail=f"rows={len(df)} output={os.path.basename(output_csv)}",
+        )
         return True
     else:
-        logging.error("抓取任务未能生成有效数据，请检查网络或数据源。")
+        log_task_summary(
+            logging.getLogger(__name__),
+            task="海克斯抓取",
+            started_at=started_at,
+            success=False,
+            detail="error=no_valid_rows",
+        )
         return False
 
-if __name__ == "__main__":
-    main_scraper()
